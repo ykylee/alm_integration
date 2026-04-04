@@ -4,7 +4,7 @@
 - 범위: `docs/requirements/` 아래 문서
 - 대상 독자: 기획자, 개발자, 아키텍트, 운영자, 테스트 담당자
 - 상태: draft
-- 최종 수정일: 2026-04-04
+- 최종 수정일: 2026-04-05
 - 관련 문서: `docs/README.md`, `docs/overview/README.md`
 
 ## 문서 구성 원칙
@@ -17,6 +17,13 @@
 
 - 통합 중앙 관리 시스템 CRS: [system_crs.md](./system_crs.md)
 - 통합 중앙 관리 시스템 SRS: [system_srs.md](./system_srs.md)
+- 과제 등록 프로세스 정의: [task_registration_process.md](./task_registration_process.md)
+- 관리 외 프로젝트 전환 정책: [non_managed_project_transition_policy.md](./non_managed_project_transition_policy.md)
+- 조직도 관리 기준: [organization_structure_management.md](./organization_structure_management.md)
+- 인력 관리 기준: [workforce_management.md](./workforce_management.md)
+- 공유 캘린더 및 부재 일정 관리 기준: [shared_calendar_and_absence_management.md](./shared_calendar_and_absence_management.md)
+- 조직 변경 감지 및 마이그레이션 프로세스: [organization_change_migration_process.md](./organization_change_migration_process.md)
+- 프로젝트 조직 정보 갱신 규칙표: [project_organization_update_rules.md](./project_organization_update_rules.md)
 - SDLC 시스템 카테고리 정의: [../integrations/sdlc_system_categories.md](../integrations/sdlc_system_categories.md)
 
 ## 권장 읽기 순서

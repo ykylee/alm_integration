@@ -36,6 +36,13 @@
 ## 현재 핵심 문서
 
 - 프로젝트 개요: [overview/project_overview.md](./overview/project_overview.md)
+- 프로젝트 기안서: [overview/project_proposal.md](./overview/project_proposal.md)
+- 프로젝트 요약본: [overview/project_summary.md](./overview/project_summary.md)
+- 프로젝트 실행 계획서: [overview/project_execution_plan.md](./overview/project_execution_plan.md)
+- 프로젝트 WBS 초안: [overview/project_wbs.md](./overview/project_wbs.md)
+- 프로젝트 일정 초안: [overview/project_timeline_draft.md](./overview/project_timeline_draft.md)
+- 프로젝트 예산 초안: [overview/project_budget_draft.md](./overview/project_budget_draft.md)
+- 프로젝트 발표 목차: [overview/project_presentation_outline.md](./overview/project_presentation_outline.md)
 - 통합 중앙 관리 시스템 CRS: [requirements/system_crs.md](./requirements/system_crs.md)
 - 통합 중앙 관리 시스템 SRS: [requirements/system_srs.md](./requirements/system_srs.md)
 - SDLC 시스템 카테고리 정의: [integrations/sdlc_system_categories.md](./integrations/sdlc_system_categories.md)
