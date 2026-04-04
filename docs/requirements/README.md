@@ -17,6 +17,7 @@
 
 - 통합 중앙 관리 시스템 CRS: [system_crs.md](./system_crs.md)
 - 통합 중앙 관리 시스템 SRS: [system_srs.md](./system_srs.md)
+- SDLC 시스템 카테고리 정의: [../integrations/sdlc_system_categories.md](../integrations/sdlc_system_categories.md)
 
 ## 권장 읽기 순서
 
@@ -26,4 +27,5 @@
 ## 관련 문서
 
 - 프로젝트 개요: [../overview/project_overview.md](../overview/project_overview.md)
+- 연계 위키: [../integrations/README.md](../integrations/README.md)
 - 운영 위키: [../operations/README.md](../operations/README.md)

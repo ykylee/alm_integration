@@ -20,6 +20,7 @@
 
 - 프로젝트 개요: [overview/README.md](./overview/README.md)
 - 요구사항 위키: [requirements/README.md](./requirements/README.md)
+- 연계 위키: [integrations/README.md](./integrations/README.md)
 - 운영 위키: [operations/README.md](./operations/README.md)
 - 작업 백로그 인덱스: [operations/work_backlog.md](./operations/work_backlog.md)
 
@@ -37,6 +38,7 @@
 - 프로젝트 개요: [overview/project_overview.md](./overview/project_overview.md)
 - 통합 중앙 관리 시스템 CRS: [requirements/system_crs.md](./requirements/system_crs.md)
 - 통합 중앙 관리 시스템 SRS: [requirements/system_srs.md](./requirements/system_srs.md)
+- SDLC 시스템 카테고리 정의: [integrations/sdlc_system_categories.md](./integrations/sdlc_system_categories.md)
 
 ## 운영 원칙
 
