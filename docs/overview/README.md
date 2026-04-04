@@ -24,6 +24,7 @@
 - 프로젝트 일정 초안: [project_timeline_draft.md](./project_timeline_draft.md)
 - 프로젝트 예산 초안: [project_budget_draft.md](./project_budget_draft.md)
 - 프로젝트 발표 목차: [project_presentation_outline.md](./project_presentation_outline.md)
+- UI/UX 프로토타입 설명: [ui_ux_prototype.md](./ui_ux_prototype.md)
 
 ## 다음에 읽을 문서
 

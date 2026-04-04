@@ -26,6 +26,7 @@
 
 - 문서 위키 홈: [`docs/README.md`](./docs/README.md)
 - 프로젝트 개요: [`docs/overview/project_overview.md`](./docs/overview/project_overview.md)
+- UI/UX 프로토타입 설명: [`docs/overview/ui_ux_prototype.md`](./docs/overview/ui_ux_prototype.md)
 - 컨셉 수준 요구사항 `CRS`: [`docs/requirements/system_crs.md`](./docs/requirements/system_crs.md)
 - 상세 요구사항 `SRS`: [`docs/requirements/system_srs.md`](./docs/requirements/system_srs.md)
 - 작업 백로그 인덱스: [`docs/operations/work_backlog.md`](./docs/operations/work_backlog.md)
