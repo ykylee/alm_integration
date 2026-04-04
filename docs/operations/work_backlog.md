@@ -5,10 +5,17 @@
 - 대상 독자: 프로젝트 참여자, 문서 작성자, 개발자, 운영자
 - 상태: draft
 - 최종 수정일: 2026-04-04
-- 관련 문서: `AGENTS.md`, `docs/README.md`
+- 관련 문서: `AGENTS.md`, `docs/README.md`, `docs/operations/README.md`
+
+## 문서 위치
+
+- 위키 홈: [../README.md](../README.md)
+- 운영 위키: [./README.md](./README.md)
 
 ## 운영 원칙
 
+- 세션이 처음 시작되면 본 인덱스와 최근 날짜의 백로그 문서를 먼저 확인한다.
+- `in_progress` 또는 `blocked` 상태 작업이 있으면 우선 후속 조치 필요 여부를 정리한다.
 - 모든 작업은 시작 전에 브리핑 후 해당 일자의 백로그 문서에 등록한다.
 - 백로그 문서는 `docs/operations/backlog/YYYY-MM-DD.md` 형식으로 생성한다.
 - 작업 중에는 진행 현황과 영향 문서 확인 결과를 해당 일자 문서에 갱신한다.
