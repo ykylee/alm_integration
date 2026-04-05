@@ -25,6 +25,7 @@
 - 프로젝트 예산 초안: [project_budget_draft.md](./project_budget_draft.md)
 - 프로젝트 발표 목차: [project_presentation_outline.md](./project_presentation_outline.md)
 - UI/UX 프로토타입 설명: [ui_ux_prototype.md](./ui_ux_prototype.md)
+- 역할 기반 UX 구조 방향: [role_based_ux_direction.md](./role_based_ux_direction.md)
 
 ## 다음에 읽을 문서
 

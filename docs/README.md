@@ -43,6 +43,7 @@
 - 프로젝트 일정 초안: [overview/project_timeline_draft.md](./overview/project_timeline_draft.md)
 - 프로젝트 예산 초안: [overview/project_budget_draft.md](./overview/project_budget_draft.md)
 - 프로젝트 발표 목차: [overview/project_presentation_outline.md](./overview/project_presentation_outline.md)
+- 역할 기반 UX 구조 방향: [overview/role_based_ux_direction.md](./overview/role_based_ux_direction.md)
 - 통합 중앙 관리 시스템 CRS: [requirements/system_crs.md](./requirements/system_crs.md)
 - 통합 중앙 관리 시스템 SRS: [requirements/system_srs.md](./requirements/system_srs.md)
 - SDLC 시스템 카테고리 정의: [integrations/sdlc_system_categories.md](./integrations/sdlc_system_categories.md)
