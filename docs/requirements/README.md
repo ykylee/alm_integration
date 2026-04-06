@@ -4,7 +4,7 @@
 - 범위: `docs/requirements/` 아래 문서
 - 대상 독자: 기획자, 개발자, 아키텍트, 운영자, 테스트 담당자
 - 상태: draft
-- 최종 수정일: 2026-04-05
+- 최종 수정일: 2026-04-06
 - 관련 문서: `docs/README.md`, `docs/overview/README.md`
 
 ## 문서 구성 원칙
@@ -34,5 +34,6 @@
 ## 관련 문서
 
 - 프로젝트 개요: [../overview/project_overview.md](../overview/project_overview.md)
+- 아키텍처 위키: [../architecture/README.md](../architecture/README.md)
 - 연계 위키: [../integrations/README.md](../integrations/README.md)
 - 운영 위키: [../operations/README.md](../operations/README.md)

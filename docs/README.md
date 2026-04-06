@@ -4,7 +4,7 @@
 - 범위: `docs/` 아래 모든 문서
 - 대상 독자: 기획자, 개발자, 운영자, 프로젝트 참여자
 - 상태: draft
-- 최종 수정일: 2026-04-04
+- 최종 수정일: 2026-04-06
 - 관련 문서: `AGENTS.md`
 
 ## 문서 읽기 흐름
@@ -14,12 +14,14 @@
 1. 프로젝트 배경과 방향 확인: `overview`
 2. 컨셉 수준 요구 확인: `CRS`
 3. 상세 요구 확인: `SRS`
-4. 운영 규칙과 작업 이력 확인: `operations`
+4. 아키텍처 초안과 설계 계획 확인: `architecture`
+5. 운영 규칙과 작업 이력 확인: `operations`
 
 ## 빠른 이동
 
 - 프로젝트 개요: [overview/README.md](./overview/README.md)
 - 요구사항 위키: [requirements/README.md](./requirements/README.md)
+- 아키텍처 위키: [architecture/README.md](./architecture/README.md)
 - 연계 위키: [integrations/README.md](./integrations/README.md)
 - 운영 위키: [operations/README.md](./operations/README.md)
 - 작업 백로그 인덱스: [operations/work_backlog.md](./operations/work_backlog.md)
@@ -46,6 +48,7 @@
 - 역할 기반 UX 구조 방향: [overview/role_based_ux_direction.md](./overview/role_based_ux_direction.md)
 - 통합 중앙 관리 시스템 CRS: [requirements/system_crs.md](./requirements/system_crs.md)
 - 통합 중앙 관리 시스템 SRS: [requirements/system_srs.md](./requirements/system_srs.md)
+- 통합 중앙 관리 시스템 아키텍처 초안: [architecture/system_architecture_draft.md](./architecture/system_architecture_draft.md)
 - SDLC 시스템 카테고리 정의: [integrations/sdlc_system_categories.md](./integrations/sdlc_system_categories.md)
 
 ## 운영 원칙

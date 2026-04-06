@@ -4,7 +4,7 @@
 - 범위: `docs/operations/backlog/` 아래의 일자별 백로그 문서
 - 대상 독자: 프로젝트 참여자, 문서 작성자, 개발자, 운영자
 - 상태: draft
-- 최종 수정일: 2026-04-04
+- 최종 수정일: 2026-04-06
 - 관련 문서: `AGENTS.md`, `docs/README.md`, `docs/operations/README.md`
 
 ## 문서 위치

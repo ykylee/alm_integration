@@ -4,7 +4,7 @@
 - 범위: `docs/overview/` 아래 문서
 - 대상 독자: 프로젝트 스폰서, 기획자, 개발자, 운영자, 아키텍트
 - 상태: draft
-- 최종 수정일: 2026-04-04
+- 최종 수정일: 2026-04-06
 - 관련 문서: `docs/README.md`, `docs/requirements/README.md`
 
 ## 이 카테고리에서 다루는 내용
@@ -31,3 +31,4 @@
 
 - 컨셉 수준 요구: [../requirements/system_crs.md](../requirements/system_crs.md)
 - 상세 요구사항: [../requirements/system_srs.md](../requirements/system_srs.md)
+- 아키텍처 초안: [../architecture/system_architecture_draft.md](../architecture/system_architecture_draft.md)

@@ -4,7 +4,7 @@
 - 범위: `docs/operations/` 아래 문서
 - 대상 독자: 프로젝트 참여자, 문서 작성자, 개발자, 운영자
 - 상태: draft
-- 최종 수정일: 2026-04-04
+- 최종 수정일: 2026-04-06
 - 관련 문서: `docs/README.md`, `docs/operations/work_backlog.md`
 
 ## 이 카테고리에서 다루는 내용
