@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Schubert Organization Operations</title><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /><link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" /><link rel="stylesheet" href="./styles.css" /></head>
+  <body data-screen="organization">
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="topbar-copy"><p class="eyebrow">Schubert Prototype</p><h1>조직 운영 상세 페이지</h1><p class="topbar-summary">조직장 기준 승인, 가용성, 인력 배치, 조직 변경 영향도를 실제 운영 판단에 맞게 펼친 페이지</p></div>
+        <div class="topbar-side"><div class="topbar-meta"><div><span>Phase 1 MVP</span><strong>2026-08</strong></div><div><span>Phase 2 Prototype</span><strong>2026-10</strong></div></div><div class="role-switcher" aria-label="역할 전환"><button class="role-chip" data-role="developer">개발자</button><button class="role-chip" data-role="project-lead">프로젝트리더</button><button class="role-chip" data-role="org-head">조직장</button><button class="role-chip" data-role="sys-admin">시스템 관리자</button><button class="role-chip" data-role="se">SE 담당자</button><button class="role-chip" data-role="qa">테스트 담당자</button></div></div>
+      </header>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand-block"><p class="brand-name">SCHUBERT</p><p class="brand-copy">승인 책임, 조직 가용성, 과제 분포를 실제 판단용 상세 정보로 확장한 페이지</p></div>
+          <div class="sidebar-role"><p class="sidebar-label">현재 역할</p><strong id="role-name">개발자</strong><p id="role-summary">내 리뷰, 빌드, 테스트 보완이 먼저 보이는 작업 중심 홈</p></div>
+          <nav class="screen-nav" aria-label="프로토타입 화면">
+            <a class="nav-item" data-screen="overview" href="./index.html"><span class="nav-index">01</span><span><strong>역할 홈</strong><small>역할별 첫 화면과 우선순위</small></span></a>
+            <a class="nav-item" data-screen="tasks" href="./tasks.html"><span class="nav-index">02</span><span><strong>과제 워크스페이스</strong><small>과제별 요구, 리뷰, 빌드, 품질 상세</small></span></a>
+            <a class="nav-item" data-screen="delivery" href="./delivery.html"><span class="nav-index">03</span><span><strong>프로젝트 운영</strong><small>일정, 위험, 승인 병목 상세</small></span></a>
+            <a class="nav-item" data-screen="organization" href="./organization.html"><span class="nav-index">04</span><span><strong>조직 운영</strong><small>승인, 가용성, 조직 영향 상세</small></span></a>
+            <a class="nav-item" data-screen="quality" href="./quality.html"><span class="nav-index">05</span><span><strong>품질 검증</strong><small>`SE`/테스트 담당자 상세 작업면</small></span></a>
+            <a class="nav-item" data-screen="admin" href="./admin.html"><span class="nav-index">06</span><span><strong>관리자 콘솔</strong><small>연계, 조직 변경, 감사 로그 상세</small></span></a>
+          </nav>
+        </aside>
+        <main class="workspace">
+          <div class="screen-header"><div><p class="eyebrow">Organization Operations</p><h2>승인, 가용성, 인력 배치, 조직 영향</h2></div><div class="status-chip" id="page-role-chip">조직장 집중: Capacity & Approval</div></div>
+          <div class="detail-grid two-col">
+            <section class="panel emphasis"><div class="panel-head"><h3 id="page-role-title">Capacity & Approval</h3><span id="page-role-kicker">Organization Focus</span></div><p class="panel-copy" id="page-role-summary">조직 수용 가능성, 승인 대기, 가용성 저하를 먼저 본다.</p><div class="bullet-stack" id="page-role-points"></div></section>
+            <section class="panel"><div class="panel-head"><h3>조직 현황 요약</h3><span>Capacity</span></div><div class="metric-block"><div><span>활성 과제</span><strong>12</strong></div><div><span>핵심 인력 부재</span><strong>3</strong></div><div><span>조정 필요 과제</span><strong>4</strong></div></div></section>
+          </div>
+          <div class="detail-grid three-col">
+            <section class="panel"><div class="panel-head"><h3>승인 대기</h3><span>Approval Surface</span></div><div class="bullet-stack"><div><strong>관리 대상 전환</strong><p>비관리 프로젝트 2건 전환 요청</p></div><div><strong>조직 변경 반영</strong><p>승인 루트 4건 재정렬 필요</p></div><div><strong>일정 조정</strong><p>결제플랫폼실 릴리스 충돌 1건</p></div></div></section>
+            <section class="panel"><div class="panel-head"><h3>조직 가용성</h3><span>Availability</span></div><table class="status-table"><tbody><tr><td>결제플랫폼실</td><td>리뷰 모수 8명 → 6명</td><td class="warn">감소</td></tr><tr><td>인프라 지원</td><td>SE 1명 출장</td><td class="warn">부분 영향</td></tr><tr><td>QA 셀</td><td>재검증 슬롯 확보</td><td class="ok">정상</td></tr></tbody></table></section>
+            <section class="panel"><div class="panel-head"><h3>조직 변경 영향</h3><span>Impact</span></div><div class="bullet-stack"><div><strong>영향 과제</strong><p>활성 과제 12건</p></div><div><strong>승인 루트</strong><p>4건 재계산 필요</p></div><div><strong>프로젝트 조직 정보</strong><p>18건 갱신 후보</p></div></div></section>
+          </div>
+          <div class="detail-grid two-col">
+            <section class="panel"><div class="panel-head"><h3>공유 캘린더</h3><span>Calendar</span></div><div class="calendar-strip"><span class="event leave">휴가 2</span><span class="event trip">출장 1</span><span class="event review">집중 리뷰</span><span class="event edu">교육 1</span></div><p class="panel-copy">다음 주 리뷰 가능 인원 모수는 8명에서 6명으로 감소하며, 결제 과제 승인 일정 조정이 필요하다.</p></section>
+            <section class="panel"><div class="panel-head"><h3>과제 분포</h3><span>Portfolio Mix</span></div><table class="status-table"><tbody><tr><td>중요 과제</td><td>3건</td><td class="warn">집중</td></tr><tr><td>일반 과제</td><td>7건</td><td class="ok">정상</td></tr><tr><td>비관리 프로젝트</td><td>2건</td><td class="warn">전환 검토</td></tr></tbody></table></section>
+          </div>
+        </main>
+      </div>
+    </div>
+    <script src="./app.js"></script>
+  </body>
+</html>

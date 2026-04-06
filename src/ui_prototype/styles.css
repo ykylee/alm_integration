@@ -35,6 +35,10 @@ button {
   font: inherit;
 }
 
+a {
+  color: inherit;
+}
+
 .app-shell {
   padding: 24px;
 }
@@ -224,6 +228,7 @@ button {
   text-align: left;
   cursor: pointer;
   transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+  text-decoration: none;
 }
 
 .nav-item:hover,
@@ -368,6 +373,20 @@ button {
 }
 
 .workspace-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.detail-grid {
+  display: grid;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.detail-grid.two-col {
+  grid-template-columns: 1.1fr 0.9fr;
+}
+
+.detail-grid.three-col {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
@@ -573,7 +592,9 @@ button {
   .hero-panel,
   .task-hero,
   .workspace-grid,
-  .strip-grid {
+  .strip-grid,
+  .detail-grid.two-col,
+  .detail-grid.three-col {
     grid-template-columns: 1fr;
   }
 

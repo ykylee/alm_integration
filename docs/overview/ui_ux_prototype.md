@@ -24,17 +24,22 @@
 ## 2. 포함한 화면
 
 - 역할 홈: 개발자, 프로젝트리더, 조직장, 시스템 관리자, `SE` 담당자, 테스트 담당자를 전환하며 첫 화면을 확인하는 메인 화면
-- 과제 워크스페이스: 공통 과제 상세 구조와 역할별 집중 탭을 함께 보여주는 화면
-- 프로젝트 운영: 프로젝트리더 관점의 일정, 위험, 승인 병목을 보여주는 화면
-- 조직 운영: 조직장 관점의 승인, 조직 가용성, 영향도를 보여주는 화면
-- 품질 검증: `SE` 담당자와 테스트 담당자의 품질/반영 작업면을 보여주는 화면
-- 관리자 콘솔: `인사 DB -> 내부 데이터 -> Crowd` 흐름과 연계 상태, 감사 관리가 모인 시스템 관리자 화면
+- 과제 워크스페이스 상세: 요구사항, 코드리뷰, 빌드/배포, 품질 게이트, 결함, 참여자/캘린더를 별도 상세 영역으로 보여주는 페이지
+- 프로젝트 운영 상세: 마일스톤, 위험 등록부, 승인 큐, 의존 관계, 보고 요약을 상세하게 보여주는 페이지
+- 조직 운영 상세: 승인 대기, 조직 가용성, 조직 변경 영향, 공유 캘린더, 과제 분포를 상세하게 보여주는 페이지
+- 품질 검증 상세: `SE` 담당자용 환경/배포 검토와 테스트 담당자용 검증/결함 보드를 함께 보여주는 페이지
+- 관리자 콘솔 상세: `인사 DB -> 내부 데이터 -> Crowd` 흐름, 연계 상태, 매핑 이상, 권한/감사 정보를 상세하게 보여주는 시스템 관리자 페이지
 
 ## 3. 열람 방법
 
-프로토타입은 정적 파일로 구성되어 있으며 브라우저에서 바로 열 수 있다.
+프로토타입은 정적 파일로 구성되어 있으며 브라우저에서 바로 열 수 있다. 현재는 메뉴별 상세 페이지 구조를 사용한다.
 
 - 진입 파일: [../../src/ui_prototype/index.html](../../src/ui_prototype/index.html)
+- 과제 워크스페이스 상세: [../../src/ui_prototype/tasks.html](../../src/ui_prototype/tasks.html)
+- 프로젝트 운영 상세: [../../src/ui_prototype/delivery.html](../../src/ui_prototype/delivery.html)
+- 조직 운영 상세: [../../src/ui_prototype/organization.html](../../src/ui_prototype/organization.html)
+- 품질 검증 상세: [../../src/ui_prototype/quality.html](../../src/ui_prototype/quality.html)
+- 관리자 콘솔 상세: [../../src/ui_prototype/admin.html](../../src/ui_prototype/admin.html)
 - 스타일 파일: [../../src/ui_prototype/styles.css](../../src/ui_prototype/styles.css)
 - 스크립트 파일: [../../src/ui_prototype/app.js](../../src/ui_prototype/app.js)
 - 렌더링 출력 경로: `output/playwright/ui_prototype/<version>/`
@@ -47,10 +52,10 @@ python3 -m http.server
 
 그 뒤 브라우저에서 `http://localhost:8000/src/ui_prototype/index.html` 로 접속하면 된다.
 
-렌더 스크립트를 사용할 때는 버전 폴더를 구분해 저장한다. 기본 버전은 현재 역할 기반 개편본인 `v2_role_based` 다.
+렌더 스크립트를 사용할 때는 버전 폴더를 구분해 저장한다. 기본 버전은 현재 메뉴별 상세 페이지 구조를 반영한 `v3_detail_pages` 다.
 
 ```bash
-UI_PROTOTYPE_RENDER_VERSION=v2_role_based node src/ui_prototype/render_screenshots.js
+UI_PROTOTYPE_RENDER_VERSION=v3_detail_pages node src/ui_prototype/render_screenshots.js
 ```
 
 ## 4. 반영 기준

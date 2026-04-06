@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Schubert Quality Workspace</title><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /><link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" /><link rel="stylesheet" href="./styles.css" /></head>
+  <body data-screen="quality">
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="topbar-copy"><p class="eyebrow">Schubert Prototype</p><h1>품질 검증 상세 페이지</h1><p class="topbar-summary">`SE` 담당자와 테스트 담당자가 공통 품질 게이트를 보되 각자 다른 작업면을 쓰도록 확장한 상세 페이지</p></div>
+        <div class="topbar-side"><div class="topbar-meta"><div><span>Phase 1 MVP</span><strong>2026-08</strong></div><div><span>Phase 2 Prototype</span><strong>2026-10</strong></div></div><div class="role-switcher" aria-label="역할 전환"><button class="role-chip" data-role="developer">개발자</button><button class="role-chip" data-role="project-lead">프로젝트리더</button><button class="role-chip" data-role="org-head">조직장</button><button class="role-chip" data-role="sys-admin">시스템 관리자</button><button class="role-chip" data-role="se">SE 담당자</button><button class="role-chip" data-role="qa">테스트 담당자</button></div></div>
+      </header>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand-block"><p class="brand-name">SCHUBERT</p><p class="brand-copy">환경/배포 검토와 테스트/결함 검증을 하나의 품질 페이지에서 분리해 보여주는 구조</p></div>
+          <div class="sidebar-role"><p class="sidebar-label">현재 역할</p><strong id="role-name">개발자</strong><p id="role-summary">내 리뷰, 빌드, 테스트 보완이 먼저 보이는 작업 중심 홈</p></div>
+          <nav class="screen-nav" aria-label="프로토타입 화면">
+            <a class="nav-item" data-screen="overview" href="./index.html"><span class="nav-index">01</span><span><strong>역할 홈</strong><small>역할별 첫 화면과 우선순위</small></span></a>
+            <a class="nav-item" data-screen="tasks" href="./tasks.html"><span class="nav-index">02</span><span><strong>과제 워크스페이스</strong><small>과제별 요구, 리뷰, 빌드, 품질 상세</small></span></a>
+            <a class="nav-item" data-screen="delivery" href="./delivery.html"><span class="nav-index">03</span><span><strong>프로젝트 운영</strong><small>일정, 위험, 승인 병목 상세</small></span></a>
+            <a class="nav-item" data-screen="organization" href="./organization.html"><span class="nav-index">04</span><span><strong>조직 운영</strong><small>승인, 가용성, 조직 영향 상세</small></span></a>
+            <a class="nav-item" data-screen="quality" href="./quality.html"><span class="nav-index">05</span><span><strong>품질 검증</strong><small>`SE`/테스트 담당자 상세 작업면</small></span></a>
+            <a class="nav-item" data-screen="admin" href="./admin.html"><span class="nav-index">06</span><span><strong>관리자 콘솔</strong><small>연계, 조직 변경, 감사 로그 상세</small></span></a>
+          </nav>
+        </aside>
+        <main class="workspace">
+          <div class="screen-header"><div><p class="eyebrow">Quality Workspace</p><h2>환경 검토, 테스트 검증, 릴리스 게이트</h2></div><div class="status-chip" id="page-role-chip">SE 담당자 집중: Environment Review</div></div>
+          <div class="detail-grid two-col">
+            <section class="panel emphasis"><div class="panel-head"><h3 id="page-role-title">Environment Review</h3><span id="page-role-kicker">Quality Focus</span></div><p class="panel-copy" id="page-role-summary">환경 차이, CI 초안, 릴리스 체크리스트를 먼저 본다.</p><div class="bullet-stack" id="page-role-points"></div></section>
+            <section class="panel"><div class="panel-head"><h3>공통 품질 상태</h3><span>Gate Snapshot</span></div><div class="metric-block"><div><span>정적분석</span><strong>Major 1</strong></div><div><span>차단 결함</span><strong>1</strong></div><div><span>릴리스 판단</span><strong>보류</strong></div></div></section>
+          </div>
+          <div class="detail-grid three-col">
+            <section class="panel"><div class="panel-head"><h3>`SE` 작업면</h3><span>Environment</span></div><div class="bullet-stack"><div><strong>환경 차이</strong><p>staging/production 변수 2건 차이</p></div><div><strong>`CI` 초안</strong><p>`Bamboo Specs` 변수 3건 확인 필요</p></div><div><strong>산출물</strong><p>패키지 2개 검증 필요</p></div></div></section>
+            <section class="panel"><div class="panel-head"><h3>테스트 작업면</h3><span>Test Execution</span></div><div class="bullet-stack"><div><strong>회귀 실행률</strong><p>42/48 실행 완료</p></div><div><strong>재검증 대기</strong><p>2건 오늘 처리 필요</p></div><div><strong>`AI` 테스트 초안</strong><p>4건 생성, 2건 채택</p></div></div></section>
+            <section class="panel"><div class="panel-head"><h3>결함 현황</h3><span>Defect Board</span></div><table class="status-table"><tbody><tr><td>차단</td><td>결제 취소 시나리오</td><td class="danger-text">열림</td></tr><tr><td>주요</td><td>리뷰 모수 보정 오류</td><td class="warn">수정 중</td></tr><tr><td>재검증</td><td>배포 패키지 메타데이터</td><td class="warn">대기</td></tr></tbody></table></section>
+          </div>
+          <div class="detail-grid two-col">
+            <section class="panel"><div class="panel-head"><h3>릴리스 게이트</h3><span>Release Gate</span></div><table class="status-table"><tbody><tr><td>정적분석</td><td>Critical 0 / Major 1</td><td class="warn">보류</td></tr><tr><td>단위테스트</td><td>Coverage 78%</td><td class="warn">목표 미달</td></tr><tr><td>통합테스트</td><td>시나리오 6건 남음</td><td class="warn">진행 중</td></tr><tr><td>릴리스 판단</td><td>결함 재검증 필요</td><td class="danger-text">차단</td></tr></tbody></table></section>
+            <section class="panel"><div class="panel-head"><h3>품질 추세</h3><span>Trend</span></div><div class="bullet-stack"><div><strong>최근 7일</strong><p>빌드 안정도 98.2%, 테스트 커버리지 +2%</p></div><div><strong>위험 포인트</strong><p>회귀 지연과 환경 차이 동시 발생</p></div><div><strong>다음 액션</strong><p>차단 결함 해소 후 릴리스 재판단</p></div></div></section>
+          </div>
+        </main>
+      </div>
+    </div>
+    <script src="./app.js"></script>
+  </body>
+</html>
