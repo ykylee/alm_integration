@@ -165,6 +165,7 @@
 - `project` 는 다수의 `work_item` 을 가진다.
 - `work_item` 은 다수의 `work_item_hierarchy` 관계를 통해 계층을 구성한다.
 - `work_item` 은 `work_item_plan_link` 를 통해 `iteration`, `release`, `milestone`, `wbs_node` 와 연결된다.
+- `work_item` 의 계획 연결 방식은 기본적으로 `project_process_model` 과 `planning_scheme` 을 상속하며, 필요한 경우에만 예외 연결 규칙을 허용하는 편이 적절하다.
 - `process_model_definition` 은 `workflow_scheme`, `planning_scheme`, `view_scheme` 조합으로 구체화된다.
 - `work_item.current_detailed_status_code` 와 `work_item_status_history` 는 `workflow_status_definition`, `workflow_transition_definition` 과 일관되게 연결되어야 한다.
 - `quality_signal`, `review_summary`, `build_summary`, `test_execution_summary` 는 `work_item` 또는 외부 변경/빌드 식별자에 연결된다.
@@ -184,6 +185,7 @@
 - `epic`, `story`, `task`, `sub-task` 는 별도 엔터티보다 `work_item_type` 과 계층 관계로 표현하는 편이 우선이다.
 - 현재의 `Agile`, `V-Model` 과 향후 신규 모델의 차이는 핵심 업무 엔터티가 아니라 `process_model`, 상태 모델, 계획 단위, 시각화 방식에서 흡수해야 한다.
 - `process_model` 은 고정 코드값보다 별도 정의 엔터티 또는 이에 준하는 메타모델로 관리하는 편이 적절하다.
+- 계획 단위 연결 사실은 저장 모델에 남기고, 보드/간트/릴리스/WBS 표현은 읽기 모델에서 재구성하는 편이 적절하다.
 - `스크럼 보드`, `간트 차트`, `WBS` 차트, 릴리스 보드는 같은 `work_item` 데이터를 서로 다른 읽기 모델로 재구성한 결과로 본다.
 
 ## 11. 후속 상세화 후보

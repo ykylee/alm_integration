@@ -246,11 +246,12 @@
   - `planning_scheme_id`: 계획 스킴 참조
   - `view_scheme_id`: 보기 스킴 참조
   - `is_primary`: 기본 활성 모델 여부
+  - `assignment_scope`: 프로젝트 기본값인지 예외 설정인지 구분하는 범위 값
   - `effective_from`: 적용 시작 시점
   - `effective_to`: 적용 종료 시점
   - `created_at`: 생성 시각
   - `updated_at`: 최종 수정 시각
-- 비고: 프로젝트별 활성 프로세스 모델 지정
+- 비고: 프로젝트별 활성 프로세스 모델 지정. 동일 시점에는 기본 활성 모델이 1개만 존재하도록 관리하고, `work_item` 은 기본적으로 이 설정을 상속한다.
 
 ### 3.10 `iteration`
 
@@ -328,9 +329,14 @@
   - `plan_type`: 연결 대상 계획 단위 유형
   - `plan_id`: 연결 대상 계획 단위 식별자
   - `link_role`: 소속/대상/게이트 등 연결 역할
+  - `sequence_no`: 동일 계획 단위 내 표시 순서
+  - `is_primary`: 동일 유형 다중 연결 시 대표 연결 여부
+  - `linked_by_rule_ref`: 어떤 계획 규칙 또는 정책으로 연결됐는지에 대한 참조
+  - `effective_from`: 연결 적용 시작 시점
+  - `effective_to`: 연결 적용 종료 시점
   - `created_at`: 생성 시각
   - `updated_at`: 최종 수정 시각
-- 비고: `iteration`, `release`, `milestone`, `wbs_node` 연결 공통화
+- 비고: `iteration`, `release`, `milestone`, `wbs_node` 연결 공통화. 저장 모델은 연결 사실과 최소 제약만 보관하고, 보드/간트/릴리스 뷰는 읽기 모델로 재구성한다.
 
 ## 4. 조직 및 인력 도메인 엔터티
 
@@ -942,11 +948,17 @@
   - `uses_milestone`: 마일스톤 사용 여부
   - `uses_wbs`: `WBS` 사용 여부
   - `allows_parallel_tracks`: 병렬 트랙 허용 여부
+  - `default_plan_unit_type`: 기본 계획 단위 유형
+  - `allows_multi_iteration_link`: 하나의 `work_item` 이 여러 반복 단위에 연결될 수 있는지 여부
+  - `allows_multi_release_link`: 하나의 `work_item` 이 여러 릴리스에 연결될 수 있는지 여부
+  - `allows_multi_milestone_link`: 하나의 `work_item` 이 여러 마일스톤에 연결될 수 있는지 여부
+  - `allows_multi_wbs_link`: 하나의 `work_item` 이 여러 `WBS` 노드에 연결될 수 있는지 여부
+  - `default_link_role_policy`: 기본 연결 역할 정책
   - `is_default`: 기본 스킴 여부
   - `version`: 스킴 버전
   - `created_at`: 생성 시각
   - `updated_at`: 최종 수정 시각
-- 비고: 계획 단위 허용 여부/관계 정의
+- 비고: 계획 단위 허용 여부, 다중 연결 허용 범위, 기본 연결 정책 정의
 
 ### 9.6 `view_scheme`
 
@@ -988,4 +1000,5 @@
 - `work_item_type` 기본 집합을 전사 표준으로 둘지, 프로젝트별 확장을 허용할지
 - `project_scope`, `project_work_item_policy` 를 초기 릴리스 범위에 포함할지
 - `workflow_status_definition`, `workflow_transition_definition` 을 초기 릴리스 범위에 포함할지
+- `planning_scheme` 의 다중 연결 규칙을 프로젝트별 오버라이드까지 허용할지
 - 읽기 모델 성격이 강한 엔터티를 별도 스냅샷 모델로 더 분리할지

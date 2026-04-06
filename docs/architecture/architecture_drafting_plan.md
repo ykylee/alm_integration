@@ -67,6 +67,7 @@
 - 2026-04-06 `work_item` 상세 검토에서는 본체 엔터티를 슬림하게 유지하고, 계층/계획 연결/상태 이력/외부 참조는 별도 엔터티로 분리하는 방향을 우선 검토한다.
 - 2026-04-06 `work_item` 본체 정의에서 `process_model_definition_id`, `progress_percent`, `board_rank` 를 제거 후보로 보고, 각각 프로젝트 프로세스 설정 또는 읽기 모델로 분리하는 방향을 반영한다.
 - 2026-04-06 상태 모델 상세화에서는 `workflow_scheme` 만으로는 부족하다고 판단해, `workflow_status_definition` 과 `workflow_transition_definition` 을 추가로 정의하는 방향을 반영한다.
+- 2026-04-06 계획 연결 규칙 상세화에서는 `project_process_model` 의 기본 상속, `planning_scheme` 의 다중 연결 허용 범위, `work_item_plan_link` 의 최소 저장 책임을 분리해 정리한다.
 
 ## 7. 도메인 모델 구체화 전 확인 항목
 
