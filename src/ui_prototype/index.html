@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Schubert UI Prototype</title>
+    <title>Schubert Role Prototype</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./styles.css" />
@@ -15,18 +15,31 @@
   <body>
     <div class="app-shell">
       <header class="topbar">
-        <div>
+        <div class="topbar-copy">
           <p class="eyebrow">Schubert Prototype</p>
-          <h1>과제 중심 통합 관리 워크스페이스</h1>
+          <h1>역할 기반 과제 운영 워크스페이스</h1>
+          <p class="topbar-summary">
+            하나의 과제를 중심으로 역할마다 다른 의사결정 문맥을 제공하는 `Phase 1` 운영 표면
+          </p>
         </div>
-        <div class="topbar-meta">
-          <div>
-            <span>Phase 1 MVP</span>
-            <strong>2026-08</strong>
+        <div class="topbar-side">
+          <div class="topbar-meta">
+            <div>
+              <span>Phase 1 MVP</span>
+              <strong>2026-08</strong>
+            </div>
+            <div>
+              <span>Phase 2 Prototype</span>
+              <strong>2026-10</strong>
+            </div>
           </div>
-          <div>
-            <span>Phase 2 Prototype</span>
-            <strong>2026-10</strong>
+          <div class="role-switcher" aria-label="역할 전환">
+            <button class="role-chip active" data-role="developer">개발자</button>
+            <button class="role-chip" data-role="project-lead">프로젝트리더</button>
+            <button class="role-chip" data-role="org-head">조직장</button>
+            <button class="role-chip" data-role="sys-admin">시스템 관리자</button>
+            <button class="role-chip" data-role="se">SE 담당자</button>
+            <button class="role-chip" data-role="qa">테스트 담당자</button>
           </div>
         </div>
       </header>
@@ -36,55 +49,68 @@
           <div class="brand-block">
             <p class="brand-name">SCHUBERT</p>
             <p class="brand-copy">
-              과제를 기준으로 `Jira`, `Bitbucket`, `Bamboo`, 조직/인력, 공유 캘린더를 한 흐름으로 묶는
-              운영 표면
+              `Jira`, `Bitbucket`, `Bamboo`, 조직/인력, 품질 검증, 운영 콘솔을 역할별 홈으로 재배치한
+              프로토타입
             </p>
+          </div>
+
+          <div class="sidebar-role">
+            <p class="sidebar-label">현재 역할</p>
+            <strong id="role-name">개발자</strong>
+            <p id="role-summary">내 리뷰, 빌드, 테스트 보완이 먼저 보이는 작업 중심 홈</p>
           </div>
 
           <nav class="screen-nav" aria-label="프로토타입 화면">
             <button class="nav-item active" data-screen="overview">
               <span class="nav-index">01</span>
               <span>
-                <strong>통합 현황</strong>
-                <small>핵심 상태와 흐름 개요</small>
+                <strong>역할 홈</strong>
+                <small>역할별 첫 화면과 우선순위</small>
               </span>
             </button>
-            <button class="nav-item" data-screen="registration">
+            <button class="nav-item" data-screen="tasks">
               <span class="nav-index">02</span>
               <span>
-                <strong>과제 등록</strong>
-                <small>일반 과제와 관리 외 프로젝트 분리</small>
+                <strong>과제 워크스페이스</strong>
+                <small>공통 과제 상세와 역할별 집중 구역</small>
               </span>
             </button>
-            <button class="nav-item" data-screen="task">
+            <button class="nav-item" data-screen="delivery">
               <span class="nav-index">03</span>
               <span>
-                <strong>과제 상세</strong>
-                <small>연계 상태와 추적성 조회</small>
+                <strong>프로젝트 운영</strong>
+                <small>일정, 위험, 승인 병목</small>
               </span>
             </button>
-            <button class="nav-item" data-screen="migration">
+            <button class="nav-item" data-screen="organization">
               <span class="nav-index">04</span>
               <span>
-                <strong>조직 변경 검토</strong>
-                <small>`인사 DB -> 내부 데이터 -> Crowd`</small>
+                <strong>조직 운영</strong>
+                <small>승인, 조직 가용성, 영향도</small>
               </span>
             </button>
-            <button class="nav-item" data-screen="calendar">
+            <button class="nav-item" data-screen="quality">
               <span class="nav-index">05</span>
               <span>
-                <strong>공유 캘린더</strong>
-                <small>부재 관리와 리뷰 가능 인원 보정</small>
+                <strong>품질 검증</strong>
+                <small>`SE`/테스트 담당자 작업면</small>
+              </span>
+            </button>
+            <button class="nav-item" data-screen="admin">
+              <span class="nav-index">06</span>
+              <span>
+                <strong>관리자 콘솔</strong>
+                <small>연계, 조직 변경, 감사 로그</small>
               </span>
             </button>
           </nav>
 
           <section class="sidebar-note">
-            <h2>시각 설계 기준</h2>
+            <h2>구성 원칙</h2>
             <ul>
-              <li>프로젝트가 아니라 과제를 가장 앞에 둔다.</li>
-              <li>운영 데이터는 한 화면에서 연결 관계가 보여야 한다.</li>
-              <li>관리자 검토가 필요한 변경은 별도 작업면으로 분리한다.</li>
+              <li>메인 진입은 역할별 홈으로 시작한다.</li>
+              <li>과제 상세는 공통 워크스페이스로 유지한다.</li>
+              <li>품질/검증과 관리자 기능은 메인 업무 흐름에서 분리한다.</li>
             </ul>
           </section>
         </aside>
@@ -93,317 +119,350 @@
           <section class="screen active" id="screen-overview">
             <div class="hero-panel">
               <div class="hero-copy">
-                <p class="eyebrow">Mission Control</p>
-                <h2>과제 하나로 요구, 변경, 빌드, 조직, 부재를 함께 본다.</h2>
-                <p>
-                  현재 기안서 기준 `Phase 1 MVP`는 1차 핵심 연계 `Jira`, `Bitbucket`, `Bamboo` 와 과제
-                  등록, 조직/인력 기준정보, 기본 변경 마이그레이션, 공유 캘린더의 최소 운영 기능으로
-                  구성된다.
+                <p class="eyebrow" id="hero-kicker">Role Home</p>
+                <h2 id="hero-title">내 작업, 리뷰 대기, 테스트 보완이 먼저 보인다.</h2>
+                <p id="hero-description">
+                  역할이 바뀌면 첫 화면의 지표, 경고, 빠른 액션, 과제 진입점도 함께 바뀐다.
                 </p>
               </div>
-              <div class="hero-metrics">
+              <div class="hero-metrics" id="hero-metrics">
                 <article>
-                  <span>등록된 관리 과제</span>
-                  <strong>128</strong>
-                  <small>이번 달 +14</small>
+                  <span>내가 볼 PR</span>
+                  <strong>7</strong>
+                  <small>오늘 기준</small>
                 </article>
                 <article>
-                  <span>동기화 안정도</span>
-                  <strong>98.2%</strong>
-                  <small>지난 7일 기준</small>
+                  <span>실패 빌드</span>
+                  <strong>2</strong>
+                  <small>조치 필요</small>
                 </article>
                 <article>
-                  <span>조직 변경 검토 대기</span>
-                  <strong>6</strong>
-                  <small>영향 프로젝트 18개</small>
+                  <span>테스트 보완</span>
+                  <strong>4</strong>
+                  <small>`AI` 초안 가능</small>
                 </article>
               </div>
             </div>
 
-            <div class="content-grid">
+            <section class="section-block">
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">Priority Queue</p>
+                  <h2>첫 화면에서 바로 처리해야 하는 일</h2>
+                </div>
+              </div>
+              <div class="strip-grid" id="priority-strip"></div>
+            </section>
+
+            <div class="workspace-grid">
               <section class="panel emphasis">
                 <div class="panel-head">
-                  <h3>핵심 운영 플로우</h3>
-                  <span>Task Centric Flow</span>
+                  <h3>빠른 액션</h3>
+                  <span>Action Entry</span>
                 </div>
-                <ol class="flow-list">
-                  <li>
-                    <strong>과제 등록</strong>
-                    <p>일반 과제는 표준 프로세스로 등록하고, 관리 외 프로젝트는 간소 등록으로 시작한다.</p>
-                  </li>
-                  <li>
-                    <strong>시스템 연계</strong>
-                    <p>`Jira`, `Bitbucket`, `Bamboo` 를 우선 연결해 요구, 변경, 빌드 추적성을 확보한다.</p>
-                  </li>
-                  <li>
-                    <strong>조직/인력 반영</strong>
-                    <p>인사 원천 변경은 검토 후 내부 마스터와 계정계로 전파한다.</p>
-                  </li>
-                  <li>
-                    <strong>부재 기반 운영</strong>
-                    <p>공유 캘린더의 부재 일정은 리뷰 가용성 계산과 운영 판단에 함께 사용한다.</p>
-                  </li>
-                </ol>
+                <div class="action-list" id="quick-actions"></div>
               </section>
 
               <section class="panel">
                 <div class="panel-head">
-                  <h3>Phase 1 MVP 범위</h3>
-                  <span>Must Have</span>
+                  <h3>지금 주의할 신호</h3>
+                  <span>Risk Signals</span>
                 </div>
-                <div class="tag-stack">
-                  <span>일반 과제 등록</span>
-                  <span>관리 외 프로젝트 전환</span>
-                  <span>조직/인력 기준정보</span>
-                  <span>변경 마이그레이션</span>
-                  <span>공유 캘린더</span>
-                  <span>부재 기반 지표</span>
-                  <span>`Jira`</span>
-                  <span>`Bitbucket`</span>
-                  <span>`Bamboo`</span>
-                </div>
+                <div class="signal-list" id="risk-signals"></div>
               </section>
 
               <section class="panel">
                 <div class="panel-head">
-                  <h3>운영 원천 분리</h3>
-                  <span>Governance</span>
+                  <h3>권한 요약</h3>
+                  <span>Access Profile</span>
                 </div>
-                <div class="source-lanes">
-                  <div>
-                    <strong>1. 인사 DB</strong>
-                    <p>조직, 인력 원천</p>
-                  </div>
-                  <div>
-                    <strong>2. Schubert</strong>
-                    <p>과제 운영용 내부 마스터</p>
-                  </div>
-                  <div>
-                    <strong>3. Crowd</strong>
-                    <p>`Atlassian` 계정 반영</p>
-                  </div>
-                </div>
+                <div class="bullet-stack" id="access-summary"></div>
               </section>
             </div>
           </section>
 
-          <section class="screen" id="screen-registration">
-            <div class="screen-header">
-              <div>
-                <p class="eyebrow">Task Entry</p>
-                <h2>과제 등록 화면</h2>
-              </div>
-              <div class="split-toggle">
-                <span class="toggle-pill active">일반 과제</span>
-                <span class="toggle-pill">관리 외 프로젝트</span>
-              </div>
-            </div>
-
-            <div class="registration-layout">
-              <section class="panel registration-form">
-                <div class="panel-head">
-                  <h3>표준 과제 등록</h3>
-                  <span>Approval Ready</span>
-                </div>
-                <div class="form-grid">
-                  <label>
-                    <span>과제명</span>
-                    <div class="fake-input">차세대 결제 서비스 품질 개선</div>
-                  </label>
-                  <label>
-                    <span>과제 유형</span>
-                    <div class="fake-input">관리 대상 과제</div>
-                  </label>
-                  <label>
-                    <span>주관 조직</span>
-                    <div class="fake-input">플랫폼개발본부 / 결제플랫폼실</div>
-                  </label>
-                  <label>
-                    <span>조직장</span>
-                    <div class="fake-input">김현수 실장</div>
-                  </label>
-                  <label>
-                    <span>연계 시스템</span>
-                    <div class="fake-input">`Jira`, `Bitbucket`, `Bamboo`</div>
-                  </label>
-                  <label>
-                    <span>승인 루트</span>
-                    <div class="fake-input">PM → 조직장 → 운영관리자</div>
-                  </label>
-                </div>
-                <div class="cta-row">
-                  <button class="primary-btn">등록 요청</button>
-                  <button class="secondary-btn">임시 저장</button>
-                </div>
-              </section>
-
-              <section class="panel registration-aside">
-                <div class="panel-head">
-                  <h3>등록 규칙</h3>
-                  <span>Policy Snapshot</span>
-                </div>
-                <ul class="rule-list">
-                  <li>일반 과제는 표준 승인 체계를 통과해야 한다.</li>
-                  <li>관리 외 프로젝트는 최소 정보만 먼저 등록할 수 있다.</li>
-                  <li>진행 중 관리 대상 전환 시 조직장과 운영관리자 검토가 필요하다.</li>
-                </ul>
-                <div class="mini-callout">
-                  <strong>전환 경고</strong>
-                  <p>
-                    관리 외 프로젝트라도 `Bitbucket` 저장소와 `Bamboo` 플랜이 연결되면 관리 대상 전환 후보로
-                    자동 식별한다.
-                  </p>
-                </div>
-              </section>
-            </div>
-          </section>
-
-          <section class="screen" id="screen-task">
+          <section class="screen" id="screen-tasks">
             <div class="screen-header">
               <div>
                 <p class="eyebrow">Task Workspace</p>
-                <h2>과제 상세 및 연계 추적</h2>
+                <h2>과제별 공통 작업면 + 역할별 집중 탭</h2>
               </div>
-              <div class="status-chip">정상 동기화</div>
+              <div class="status-chip" id="task-role-chip">개발자 집중 탭: Code Review</div>
             </div>
 
-            <div class="content-grid task-grid">
+            <div class="task-hero">
+              <div>
+                <p class="task-code">TASK-2419</p>
+                <h3>차세대 결제 서비스 품질 개선</h3>
+                <p class="task-copy">
+                  요구사항, `PR`, 빌드, 품질, 부재 일정을 공통 과제 문맥으로 연결하고 역할별로 기본 진입
+                  탭만 바꾼다.
+                </p>
+              </div>
+              <div class="task-state">
+                <div>
+                  <span>현재 단계</span>
+                  <strong>릴리스 준비</strong>
+                </div>
+                <div>
+                  <span>주요 이슈</span>
+                  <strong>품질 게이트 2건 미충족</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="tab-ribbon">
+              <span class="tab-pill active">Overview</span>
+              <span class="tab-pill">Code Review</span>
+              <span class="tab-pill">Release Readiness</span>
+              <span class="tab-pill">Environment</span>
+              <span class="tab-pill">Test Quality</span>
+              <span class="tab-pill">Defects</span>
+              <span class="tab-pill">People Calendar</span>
+            </div>
+
+            <div class="workspace-grid task-grid">
               <section class="panel emphasis">
                 <div class="panel-head">
-                  <h3>TASK-2419</h3>
-                  <span>차세대 결제 서비스 품질 개선</span>
+                  <h3>역할별 추천 진입</h3>
+                  <span id="task-focus-label">Developer Focus</span>
                 </div>
-                <div class="timeline-rail">
-                  <div><strong>`Jira`</strong><p>SPR-128 요구사항 승인 완료</p></div>
-                  <div><strong>`Bitbucket`</strong><p>`PR-392` 리뷰 중, 변경 파일 14개</p></div>
-                  <div><strong>`Bamboo`</strong><p>`build #812` 테스트 통과, 배포 대기</p></div>
+                <div class="focus-card">
+                  <strong id="task-focus-title">Code Review</strong>
+                  <p id="task-focus-copy">리뷰 대기 `PR`, 코딩룰 위반 의심, 테스트 부족 범위를 먼저 본다.</p>
                 </div>
+                <div class="mini-list" id="task-focus-points"></div>
               </section>
 
               <section class="panel">
                 <div class="panel-head">
-                  <h3>연결 상태</h3>
+                  <h3>공통 추적성</h3>
                   <span>Traceability</span>
                 </div>
                 <table class="status-table">
                   <tbody>
                     <tr><td>`Jira`</td><td>요구사항 3건 연결</td><td class="ok">정상</td></tr>
-                    <tr><td>`Bitbucket`</td><td>PR 2건, branch 4건</td><td class="ok">정상</td></tr>
-                    <tr><td>`Bamboo`</td><td>plan 1건, build 12건</td><td class="warn">재실행 1건</td></tr>
-                    <tr><td>지표 관리</td><td>코드리뷰 참여율 집계</td><td class="dim">2차 범위</td></tr>
+                    <tr><td>`Bitbucket`</td><td>`PR` 2건, branch 4건</td><td class="warn">리뷰 지연 1건</td></tr>
+                    <tr><td>`Bamboo`</td><td>build 12건, deploy 3건</td><td class="warn">재실행 1건</td></tr>
+                    <tr><td>품질 게이트</td><td>정적분석 1건, 테스트 1건</td><td class="danger-text">미충족</td></tr>
                   </tbody>
                 </table>
               </section>
 
               <section class="panel">
                 <div class="panel-head">
-                  <h3>현재 참여자</h3>
-                  <span>People</span>
+                  <h3>현재 참여자와 승인선</h3>
+                  <span>People & Approval</span>
                 </div>
                 <ul class="people-list">
-                  <li><strong>과제 책임자</strong><span>박지은 PM</span></li>
-                  <li><strong>개발 리드</strong><span>이성민</span></li>
-                  <li><strong>리뷰어 풀</strong><span>8명</span></li>
-                  <li><strong>부재 제외</strong><span>2명</span></li>
+                  <li><strong>프로젝트리더</strong><span>박지은</span></li>
+                  <li><strong>조직장</strong><span>김현수</span></li>
+                  <li><strong>`SE` 담당자</strong><span>윤태호</span></li>
+                  <li><strong>테스트 담당자</strong><span>정다은</span></li>
                 </ul>
               </section>
             </div>
           </section>
 
-          <section class="screen" id="screen-migration">
+          <section class="screen" id="screen-delivery">
             <div class="screen-header">
               <div>
-                <p class="eyebrow">Organization Migration</p>
-                <h2>조직 변경 검토 화면</h2>
+                <p class="eyebrow">Project Delivery</p>
+                <h2>프로젝트리더 중심 운영 보드</h2>
               </div>
-              <div class="status-chip danger">관리자 검토 필요 6건</div>
+              <div class="status-chip">승인 병목 3건</div>
             </div>
 
-            <div class="migration-layout">
-              <section class="panel">
+            <div class="workspace-grid delivery-grid">
+              <section class="panel emphasis">
                 <div class="panel-head">
-                  <h3>변경 감지</h3>
-                  <span>HR Sync</span>
+                  <h3>마일스톤 현황</h3>
+                  <span>Schedule Control</span>
                 </div>
-                <div class="alert-card">
-                  <strong>인사 DB 갱신 감지</strong>
-                  <p>`결제플랫폼실` → `결제플랫폼개발실` 조직명 변경 및 인력 3명 이동</p>
-                  <small>감지 시각 2026-04-05 09:10</small>
-                </div>
-                <div class="migration-steps">
-                  <div class="step current">1. 변경 확인</div>
-                  <div class="step">2. 영향 분석</div>
-                  <div class="step">3. 내부 데이터 반영</div>
-                  <div class="step">4. `Crowd` 후속 연계</div>
+                <div class="timeline-list">
+                  <div><strong>요구사항 확정</strong><p>완료, 변경 요청 1건 대기</p></div>
+                  <div><strong>코드 동결</strong><p>3일 지연 가능성, `PR` 2건 미종료</p></div>
+                  <div><strong>릴리스 승인</strong><p>품질 게이트 2건 해소 후 진행</p></div>
                 </div>
               </section>
 
               <section class="panel">
                 <div class="panel-head">
-                  <h3>영향 범위</h3>
-                  <span>Impact Surface</span>
+                  <h3>위험 과제</h3>
+                  <span>Delivery Risk</span>
                 </div>
-                <ul class="impact-list">
-                  <li><strong>활성 과제</strong><span>12건</span></li>
-                  <li><strong>조직장 승인 루트</strong><span>4건 갱신 필요</span></li>
-                  <li><strong>`Crowd` 그룹 매핑</strong><span>2건 재계산</span></li>
-                  <li><strong>프로젝트 조직 정보</strong><span>18건 검토 필요</span></li>
-                </ul>
-                <div class="cta-row">
-                  <button class="primary-btn">내부 데이터 반영</button>
-                  <button class="secondary-btn">영향 상세 보기</button>
+                <div class="signal-list">
+                  <div class="signal-card warning"><strong>리뷰 지연</strong><p>`PR-392` 26시간 대기</p></div>
+                  <div class="signal-card danger"><strong>품질 게이트</strong><p>결함 재검증 2건 미완료</p></div>
+                  <div class="signal-card neutral"><strong>인력 이슈</strong><p>핵심 리뷰어 2명 주간 부재</p></div>
+                </div>
+              </section>
+
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>의사결정 대기</h3>
+                  <span>Approval Queue</span>
+                </div>
+                <div class="bullet-stack">
+                  <div><strong>조직장 승인</strong><p>배포 일정 변경 승인 대기</p></div>
+                  <div><strong>시스템 관리자 확인</strong><p>`Bamboo` 재실행 정책 예외 승인</p></div>
+                  <div><strong>테스트 담당 확인</strong><p>회귀 범위 축소 여부 검토</p></div>
                 </div>
               </section>
             </div>
           </section>
 
-          <section class="screen" id="screen-calendar">
+          <section class="screen" id="screen-organization">
             <div class="screen-header">
               <div>
-                <p class="eyebrow">Shared Calendar</p>
-                <h2>부재 일정과 리뷰 가능 인원</h2>
+                <p class="eyebrow">Organization Operations</p>
+                <h2>조직장 중심 승인과 가용성 운영</h2>
               </div>
-              <div class="split-toggle">
-                <span class="toggle-pill active">조직 캘린더</span>
-                <span class="toggle-pill">프로젝트 캘린더</span>
-              </div>
+              <div class="status-chip">승인 대기 5건</div>
             </div>
 
-            <div class="calendar-layout">
-              <section class="panel calendar-board">
+            <div class="workspace-grid org-grid">
+              <section class="panel emphasis">
                 <div class="panel-head">
-                  <h3>이번 주 부재 현황</h3>
-                  <span>Week 15</span>
-                </div>
-                <div class="calendar-grid">
-                  <div class="day-head">Mon</div>
-                  <div class="day-head">Tue</div>
-                  <div class="day-head">Wed</div>
-                  <div class="day-head">Thu</div>
-                  <div class="day-head">Fri</div>
-                  <div class="day-cell"><span class="event trip">출장 1</span></div>
-                  <div class="day-cell"><span class="event leave">휴가 2</span></div>
-                  <div class="day-cell"><span class="event review">PR 집중 리뷰</span></div>
-                  <div class="day-cell"><span class="event leave">휴가 1</span></div>
-                  <div class="day-cell"><span class="event edu">교육 1</span></div>
-                </div>
-              </section>
-
-              <section class="panel">
-                <div class="panel-head">
-                  <h3>리뷰 가용성 계산</h3>
-                  <span>`PR-392`</span>
+                  <h3>조직 현황</h3>
+                  <span>Capacity</span>
                 </div>
                 <div class="metric-block">
-                  <div><span>원래 리뷰어 풀</span><strong>8명</strong></div>
-                  <div><span>부재 제외 인원</span><strong>2명</strong></div>
-                  <div><span>최종 모수</span><strong>6명</strong></div>
+                  <div><span>활성 과제</span><strong>12</strong></div>
+                  <div><span>핵심 인력 부재</span><strong>3</strong></div>
+                  <div><span>조정 필요 과제</span><strong>4</strong></div>
                 </div>
-                <ul class="rule-list">
-                  <li>리뷰 기간과 부재 일정이 겹친 인력은 자동 제외한다.</li>
-                  <li>운영자는 부재 유형별 지표 반영 여부를 설정할 수 있다.</li>
-                  <li>제외 근거 기간과 인원은 감사 이력으로 남긴다.</li>
-                </ul>
+              </section>
+
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>승인 대기</h3>
+                  <span>Approval Surface</span>
+                </div>
+                <div class="bullet-stack">
+                  <div><strong>관리 대상 전환</strong><p>비관리 프로젝트 2건 전환 요청</p></div>
+                  <div><strong>조직 변경 반영</strong><p>승인 루트 4건 재정렬 필요</p></div>
+                  <div><strong>일정 조정</strong><p>결제플랫폼실 릴리스 충돌 1건</p></div>
+                </div>
+              </section>
+
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>공유 캘린더 영향</h3>
+                  <span>Availability</span>
+                </div>
+                <div class="calendar-strip">
+                  <span class="event leave">휴가 2</span>
+                  <span class="event trip">출장 1</span>
+                  <span class="event review">집중 리뷰</span>
+                  <span class="event edu">교육 1</span>
+                </div>
+                <p class="panel-copy">
+                  다음 주 리뷰 가능 인원 모수는 8명에서 6명으로 감소하며, 결제 과제 승인 일정 조정이 필요하다.
+                </p>
+              </section>
+            </div>
+          </section>
+
+          <section class="screen" id="screen-quality">
+            <div class="screen-header">
+              <div>
+                <p class="eyebrow">Quality Workspace</p>
+                <h2>`SE` 담당자와 테스트 담당자를 위한 품질 검증 작업면</h2>
+              </div>
+              <div class="split-toggle">
+                <span class="toggle-pill active">SE View</span>
+                <span class="toggle-pill">QA View</span>
+              </div>
+            </div>
+
+            <div class="workspace-grid quality-grid">
+              <section class="panel emphasis">
+                <div class="panel-head">
+                  <h3>`SE` 담당자 시점</h3>
+                  <span>Environment & Release</span>
+                </div>
+                <div class="bullet-stack">
+                  <div><strong>`CI` 플랜</strong><p>`Bamboo Specs` 초안 1건, 변수 확인 필요 3건</p></div>
+                  <div><strong>산출물</strong><p>배포 패키지 2개, 운영 환경 의존성 1건 경고</p></div>
+                  <div><strong>릴리스 준비도</strong><p>반영 전 체크리스트 8/10 완료</p></div>
+                </div>
+              </section>
+
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>테스트 담당자 시점</h3>
+                  <span>Test & Defect</span>
+                </div>
+                <div class="bullet-stack">
+                  <div><strong>테스트 실행률</strong><p>회귀 시나리오 42/48 실행</p></div>
+                  <div><strong>결함 현황</strong><p>차단 1건, 주요 2건, 재검증 대기 2건</p></div>
+                  <div><strong>`AI` 보조</strong><p>단위테스트 초안 4건 생성, 2건 채택</p></div>
+                </div>
+              </section>
+
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>공통 품질 게이트</h3>
+                  <span>Release Gate</span>
+                </div>
+                <table class="status-table">
+                  <tbody>
+                    <tr><td>정적분석</td><td>Critical 0 / Major 1</td><td class="warn">보류</td></tr>
+                    <tr><td>단위테스트</td><td>Coverage 78%</td><td class="warn">목표 미달</td></tr>
+                    <tr><td>통합테스트</td><td>시나리오 6건 남음</td><td class="warn">진행 중</td></tr>
+                    <tr><td>릴리스 판단</td><td>결함 재검증 필요</td><td class="danger-text">차단</td></tr>
+                  </tbody>
+                </table>
+              </section>
+            </div>
+          </section>
+
+          <section class="screen" id="screen-admin">
+            <div class="screen-header">
+              <div>
+                <p class="eyebrow">Admin Console</p>
+                <h2>시스템 관리자 전용 운영 콘솔</h2>
+              </div>
+              <div class="status-chip danger">검토 필요 6건</div>
+            </div>
+
+            <div class="workspace-grid admin-grid">
+              <section class="panel emphasis">
+                <div class="panel-head">
+                  <h3>연계 상태</h3>
+                  <span>System Health</span>
+                </div>
+                <div class="signal-list">
+                  <div class="signal-card neutral"><strong>`Jira`</strong><p>마지막 동기화 00:15, 정상</p></div>
+                  <div class="signal-card warning"><strong>`Bamboo`</strong><p>재실행 큐 1건, 응답 지연</p></div>
+                  <div class="signal-card danger"><strong>HR Sync</strong><p>조직 변경 영향 검토 6건 대기</p></div>
+                </div>
+              </section>
+
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>조직 변경 반영</h3>
+                  <span>Migration Queue</span>
+                </div>
+                <div class="timeline-list">
+                  <div><strong>1. 변경 확인</strong><p>`결제플랫폼실` 명칭 변경, 인력 3명 이동</p></div>
+                  <div><strong>2. 영향 분석</strong><p>활성 과제 12건, 승인 루트 4건</p></div>
+                  <div><strong>3. 내부 반영</strong><p>내부 마스터 업데이트 준비 완료</p></div>
+                  <div><strong>4. 계정계 연계</strong><p>`Crowd` 그룹 2건 재계산 필요</p></div>
+                </div>
+              </section>
+
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>권한과 감사</h3>
+                  <span>Governance</span>
+                </div>
+                <div class="bullet-stack">
+                  <div><strong>역할 정책</strong><p>프로젝트리더/조직장 승인 분리 정책 적용</p></div>
+                  <div><strong>예외 승인</strong><p>`AI` 테스트 실행 권한 2건 검토</p></div>
+                  <div><strong>감사 로그</strong><p>주요 상태 변경 37건 보관</p></div>
+                </div>
               </section>
             </div>
           </section>
