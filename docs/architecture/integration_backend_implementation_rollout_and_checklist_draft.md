@@ -15,6 +15,12 @@
 
 ## 1. 문서 리뷰 요약
 
+기술 스택 가정:
+
+- 프론트엔드 1차 검토안: `React`
+- 백엔드 1차 검토안: `Rust`
+- 현재 저장소의 Python 스캐폴딩은 구조 검토용 임시 골격으로 본다.
+
 ### 1.1 현재 구현 착수에 충분히 정리된 항목
 
 - 핵심 도메인 경계와 엔터티 구조
@@ -154,6 +160,12 @@
 
 ## 3. 권장 개발 단위
 
+구현 작업 방식 원칙:
+
+- 백엔드 구현은 `TDD` 를 기본 원칙으로 진행한다.
+- 새 기능 또는 변경 작업은 단위 테스트를 먼저 작성하고, 실패를 확인한 뒤 구현을 시작한다.
+- 구현 완료 후 테스트 통과와 최소 리팩터링까지 한 작업 단위로 본다.
+
 ### 3.1 첫 스프린트 권장 범위
 
 - 마이그레이션 실행 기반
@@ -162,6 +174,7 @@
 - 원시 적재 테이블
 - `ingestion_api` 단건 수신
 - `sync_run` 생성/조회 최소선
+- 애플리케이션 부트스트랩과 헬스체크
 
 ### 3.2 두 번째 스프린트 권장 범위
 
@@ -180,13 +193,24 @@
 
 ### 4.1 공통 준비
 
+- [ ] 프론트엔드 `React`, 백엔드 `Rust` 채택 여부를 구현 착수 전에 최종 확정했다.
 - [ ] 선택할 `RDBMS` 와 마이그레이션 도구를 확정했다.
 - [ ] 개발 환경에서 빈 데이터베이스 생성과 초기화 절차를 합의했다.
 - [ ] 마이그레이션 파일 디렉터리 구조(`schema/seed/backfill`)를 준비했다.
 - [ ] 필수 시드 목록과 소유자를 정했다.
 
+### 4.1A 스택 재매핑 준비
+
+- [x] 백엔드 웹 프레임워크 1차 기준을 `axum` 으로 좁혔다.
+- [x] `Rust` 기준 DB 접근 계층 1차 기준을 `sqlx` 로 좁혔다.
+- [x] `Rust` 기준 마이그레이션 도구 1차 기준을 `sqlx migrate` 로 좁혔다.
+- [ ] 현재 임시 Python 스캐폴딩에서 유지할 계약과 폐기할 구현 세부를 구분했다.
+- [x] Rust 프로젝트 위치를 `backend/` 하위로 정했다.
+- [ ] `sqlx` offline mode 사용 여부를 정했다.
+
 ### 4.2 저장 모델 준비
 
+- [x] `sqlx migrate` 초기 구조와 첫 마이그레이션 파일을 생성했다.
 - [ ] `initial_release_ddl_draft.md` 기준으로 1차 테이블 구현 범위를 확정했다.
 - [ ] `work_item_type`, `process_model_definition`, `workflow_scheme` 필수 시드를 확정했다.
 - [ ] `schema_migration_history` 추적 방식을 정했다.
@@ -218,10 +242,27 @@
 
 ### 4.5 검증 준비
 
-- [ ] 빈 데이터베이스 부트스트랩 테스트 시나리오를 정의했다.
-- [ ] `push` 수신 후 원시 적재까지의 통합 테스트 시나리오를 정의했다.
-- [ ] `pull` 실행 후 표준화/반영까지의 통합 테스트 시나리오를 정의했다.
+- [ ] 구현 단위마다 먼저 작성할 실패 테스트 목록을 정했다.
+- [x] 상태 전이, 재시도, 취소 감사 필드 기록 같은 서비스 핵심 로직에 단위 테스트를 우선 추가했다.
+- [x] 빈 데이터베이스 부트스트랩 테스트 시나리오를 정의했다.
+- [x] `push` 수신 후 원시 적재까지의 통합 테스트 시나리오를 정의했다.
+- [x] `pull` 실행 후 원시 적재까지의 통합 테스트 시나리오를 정의했다.
 - [ ] 중복 이벤트, 늦게 도착한 이벤트, 참조 누락 이벤트 테스트 케이스를 정의했다.
+
+## 6. 최근 진행 메모
+
+- 2026-04-07 `backend/` 하위 `axum + sqlx` Rust 골격을 생성했고, `health`, `sync-runs` stub API, 서비스 단위 테스트를 추가했다.
+- 2026-04-07 `backend/migrations/` 아래에 `integration_job`, `integration_run`, `raw_ingestion_event` 1차 마이그레이션을 추가했다.
+- 2026-04-07 `ALM_BACKEND_DATABASE_URL`, `ALM_BACKEND_DATABASE_MAX_CONNECTIONS`, `ALM_BACKEND_AUTO_APPLY_MIGRATIONS` 설정을 정의하고, 앱 시작 시 `PgPool` 생성 및 선택적 migration 실행 경로를 연결했다.
+- 2026-04-07 `ALM_BACKEND_TEST_DATABASE_ADMIN_URL` 기반 임시 테스트 데이터베이스 생성 헬퍼와 빈 `PostgreSQL` 부트스트랩/migration 통합 테스트를 추가했다.
+- 2026-04-07 `integration_run` 저장 필드 확장 마이그레이션을 추가하고, `sync-runs` API가 `db_pool` 존재 시 `sqlx` 기반 `SyncRunRepository`를 사용하도록 연결했다.
+- 2026-04-07 `POST /api/v1/ingestion/events` 라우트와 `RawIngestionRepository`를 추가하고, 원시 적재/멱등 처리/잘못된 timestamp 검증 테스트를 반영했다.
+- 2026-04-07 `PullSyncOrchestrator` 를 추가해 수동 `pull` 실행이 하나의 `sync-run` 아래에서 `raw_ingestion_event` 로 적재되고, 성공/실패 건수에 따라 `completed` 또는 `partially_completed` 로 닫히는 경로를 테스트로 고정했다.
+- 2026-04-07 외부 시스템별 API 호출과 수신 payload 변환을 분리하기 위해 `pull`/`push` 어댑터 인터페이스와 `AdapterRegistry` 를 추가하고, `ingestion` 라우트와 `PullSyncOrchestrator` 가 이를 통해 시스템별 구현을 찾도록 연결했다.
+- 2026-04-07 `Jira`, `Bitbucket`, `Bamboo`, `Confluence` concrete adapter 를 추가하고, 공통 `reqwest` 전송 계층 위에서 시스템별 URL 조합과 응답/payload 파싱을 구현했다.
+- 2026-04-07 concrete adapter 단위 테스트와 레지스트리 기반 통합 테스트를 보강했고, 전체 `cargo test --manifest-path backend/Cargo.toml` 통과를 확인했다.
+- 2026-04-07 기본 registry 생성을 `AdapterEndpointConfig` 기반 builder 로 재구성해, 환경변수 직접 참조와 후속 `integration_endpoint` 로더 경로가 같은 조립 함수를 재사용할 수 있게 정리했다.
+- 2026-04-07 `integration_system`, `integration_endpoint`, `integration_credential` 최소 마이그레이션과 `DbAdapterConfigLoader` 를 추가해 앱 시작 시 DB 설정 기반 registry 를 우선 사용하고, DB 설정이 없을 때만 환경변수 기반 registry 로 fallback 하도록 연결했다.
 
 ## 5. 구현 착수 전 최종 게이트
 
@@ -241,6 +282,8 @@
 - 운영 배포 체크리스트
 - 자격증명 암호화 키 회전 정책
 - 워커 슬롯 설정의 환경별 구성 방식
+- `Rust` 기준 런타임/프레임워크 매핑
+- `axum + sqlx` 골격의 DB 연결 및 마이그레이션 실제 이식
 
 ### 6.2 1차 구현 이후 보완
 

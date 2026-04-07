@@ -37,7 +37,24 @@
 - `src/` 애플리케이션 또는 라이브러리 코드
 - `tests/` 자동화 테스트
 - `assets/` 이미지, 샘플 데이터, fixture 등 정적 자산
+- `migrations/` 스키마, 시드, 백필 마이그레이션 골격
+
+## 개발 명령
+
+- `make install-dev` 임시 Python 골격 개발 의존성 설치
+- `make run` 임시 Python API 서버 실행
+- `make test` 임시 Python 테스트 실행
+- `cargo run --manifest-path backend/Cargo.toml` Rust 백엔드 실행
+- `cargo test --manifest-path backend/Cargo.toml` Rust 백엔드 테스트 실행
+
+## 기술 스택 검토 상태
+
+- 프론트엔드 1차 검토안: `React`
+- 백엔드 1차 검토안: `Rust`
+- 현재 저장소의 백엔드 스캐폴딩은 `FastAPI + SQLAlchemy + Alembic` 기준의 임시 검증 골격이며, 최종 구현 스택 확정 전까지 구조 검토와 API 형태 확인 용도로만 사용합니다.
+- 실제 1차 구현 골격은 `backend/` 하위의 `axum + sqlx` 프로젝트를 기준으로 발전시킵니다.
+- 현재 `sync-runs` 운영 API 는 인메모리 stub 으로만 동작합니다.
 
 ## 참고
 
-현재 저장소는 초기 단계이며, 구현 스택과 빌드/테스트 진입점은 추후 확정 후 문서화할 예정입니다. 최신 작업 이력과 운영 규칙은 `docs/operations/` 아래 문서를 기준으로 확인합니다.
+최신 작업 이력과 운영 규칙은 `docs/operations/` 아래 문서를 기준으로 확인합니다.

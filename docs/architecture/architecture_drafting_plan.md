@@ -95,6 +95,20 @@
 - 2026-04-07 상태 전이 초안에서 제안한 `integration_run` 보강 컬럼을 물리 모델과 `DDL` 초안에 반영해 저장 구조와 상태 모델을 일치시킨다.
 - 2026-04-07 워커 슬롯 상한, 엔터티 직렬화, 실행 취소 시 협조적 중단, 트랜잭션 청크 롤백 경계를 별도 정책 문서로 정리해 구현 안전장치 기준으로 사용한다.
 - 2026-04-07 취소 감사 컬럼 반영 이후 `sync-runs` 목록/상세/취소 API 계약에도 취소 요청 필드와 협조적 취소 동작을 반영해 저장 구조와 운영 API 를 정합화한다.
+- 2026-04-07 문서 기반 설계를 실제 구현으로 넘기기 위해 `FastAPI + SQLAlchemy + Alembic` 기준의 백엔드 스캐폴딩과 테스트 진입점을 추가한다.
+- 2026-04-07 이후 기술 스택 1차 검토안이 프론트엔드 `React`, 백엔드 `Rust` 로 좁혀졌으므로, 현재 Python 스캐폴딩은 임시 구조 검증 골격으로 취급하고 후속 구현 설계는 `Rust` 기준 재매핑을 준비한다.
+- 2026-04-07 `Rust` 백엔드 후보를 `axum + sqlx` 로 좁히고, 별도 채택 계획 문서에서 전환 단계와 임시 Python 골격 처리 원칙을 관리한다.
+- 2026-04-07 Rust 1차 구현 경로를 `backend/` 하위 프로젝트로 확정하고, `axum + sqlx` 최소 골격 생성 작업을 시작한다.
+- 2026-04-07 `TDD` 기준으로 설정 파싱 테스트를 먼저 추가한 뒤 `ALM_BACKEND_DATABASE_URL` 기반 `PgPool` 생성과 선택적 migration 실행 경로를 Rust 런타임에 연결한다.
+- 2026-04-07 `ALM_BACKEND_TEST_DATABASE_ADMIN_URL` 기반 임시 테스트 DB 생성 헬퍼와 빈 `PostgreSQL` 부트스트랩/migration 통합 테스트를 추가해 실제 DB 초기화 경로를 검증한다.
+- 2026-04-07 `integration_run` 에 `sync-runs` API 필드를 저장할 수 있도록 확장 마이그레이션을 추가하고, 런타임에서는 `db_pool` 존재 시 `SyncRunRepository`를 우선 사용하도록 연결한다.
+- 2026-04-07 `POST /api/v1/ingestion/events` 원시 적재 경로를 추가하고, `RawIngestionRepository`에서 멱등 키 중복 판정과 원시 적재 저장을 수행하도록 연결한다.
+- 2026-04-07 `PullSyncOrchestrator` 를 추가해 수동 `pull` 실행이 `sync-run` 생성, `raw_ingestion_event` 적재, 실행 상태 종료 처리까지 이어지는 공통 경로를 갖도록 구현한다.
+- 2026-04-07 외부 시스템별 API 호출과 수신 payload 변환이 시스템별 세부 구현으로 분리될 수 있도록 `pull`/`push` 어댑터 인터페이스와 `AdapterRegistry` 를 추가하고, 런타임 경로를 이 레지스트리에 의존하도록 정리한다.
+- 2026-04-07 `Jira`, `Bitbucket`, `Bamboo`, `Confluence` concrete 어댑터를 추가하고, 공통 `HTTP` 전송 계층 위에서 시스템별 URL 조합과 응답/payload 파싱 책임을 구현해 실제 연계 확장 구조를 마련한다.
+- 2026-04-07 새 외부 시스템을 같은 패턴으로 붙일 수 있도록 adapter 구현 절차, 테스트 순서, 레지스트리 등록 기준, 설정 연결 원칙을 온보딩 가이드 문서로 정리한다.
+- 2026-04-07 기본 어댑터 registry 생성을 `AdapterEndpointConfig` 기반 builder 로 재구성해, 현재 환경변수 기반 기본 등록과 후속 `integration_endpoint`/`integration_credential` 로더가 같은 조립 경로를 공유할 수 있게 정리한다.
+- 2026-04-07 `integration_system`, `integration_endpoint`, `integration_credential` 최소 마이그레이션과 `DbAdapterConfigLoader` 를 추가해 앱 시작 시 DB 설정 기반 adapter registry 를 우선 구성하도록 연결한다.
 
 ## 7. 도메인 모델 구체화 전 확인 항목
 

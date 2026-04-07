@@ -40,6 +40,18 @@
 - `pull`/`push` 공통 수집 파이프라인과 충돌 방지 규칙
 - 초기 운영 API 와 내부 배치 계약
 - `DB` 마이그레이션 및 시드 데이터 운영 전략
+- `FastAPI + SQLAlchemy + Alembic` 기준의 초기 백엔드 스캐폴딩
+- `axum + sqlx` 기준의 초기 Rust 골격, 첫 마이그레이션, `PgPool` 초기화 경로
+- 빈 `PostgreSQL` 기준 부트스트랩 및 migration 통합 테스트
+- `sync-runs` 경로의 `sqlx` 리포지토리 연결과 `integration_run` API 저장 필드 확장
+- `POST /api/v1/ingestion/events` 원시 적재 경로와 멱등 처리 저장소 연결
+- `PullSyncOrchestrator` 기반 수동 `pull` 실행의 원시 적재 경로와 실행 상태 종료 처리
+- 시스템별 `pull`/`push` 세부 구현을 분리하기 위한 어댑터 레지스트리와 공통 인터페이스
+- `Jira`, `Bitbucket`, `Bamboo`, `Confluence` 기준 concrete `pull`/`push` 어댑터와 공통 `HTTP` 전송 계층
+- 새 외부 시스템 추가 시 따라갈 수 있는 adapter 온보딩 가이드
+- 환경변수 기반 기본 등록과 별도로 `AdapterEndpointConfig` 배열에서 registry 를 조립하는 설정 레코드 builder
+
+위 스캐폴딩은 구조 검증용 임시 골격이다. 2026-04-07 기준 최종 구현 스택의 1차 검토안은 프론트엔드 `React`, 백엔드 `Rust` 이다.
 
 ### 2.3 현재 남아 있는 보완 포인트
 
@@ -54,6 +66,12 @@
 
 4. 워커 슬롯 상한의 실제 런타임 설정 방식 확정 필요  
 정책 초안과 취소 감사 컬럼 반영은 완료됐지만, 환경별 슬롯 상한값과 큐 우선순위 설정을 어떤 구성 방식으로 관리할지는 구현 직전에 다시 확정해야 한다.
+
+5. `Rust` 기준 런타임/DB 부트스트랩 보강 필요  
+`backend/` 하위 `axum + sqlx` 골격과 첫 마이그레이션, `PgPool` 초기화 경로는 추가됐지만, 실제 `PostgreSQL` 연결 검증, 빈 데이터베이스 부트스트랩 테스트, 시드 데이터 적용 흐름은 후속 구현 단계에서 이어서 닫아야 한다.
+
+6. 시스템별 어댑터 자격증명 복호화 계층 보강 필요  
+현재는 `integration_endpoint`, `integration_credential` 을 읽어 registry 를 구성하는 `DB` 로더까지는 구현됐지만, 실제 운영에서는 `secret_ciphertext` 를 복호화해 adapter 에 주입하는 비밀정보 서비스 연계가 후속 구현으로 필요하다.
 
 ## 3. 설계 목표
 
@@ -157,3 +175,5 @@
 - 실행 상태 전이 보조 산출물은 [integration_run_state_transition_draft.md](./integration_run_state_transition_draft.md)로 관리한다.
 - 워커 슬롯 및 취소/롤백 보조 산출물은 [integration_worker_slot_and_cancellation_policy_draft.md](./integration_worker_slot_and_cancellation_policy_draft.md)로 관리한다.
 - `sync-runs` 취소 API 와 실행 상세 응답 보강은 [integration_backend_api_and_batch_contract_draft.md](./integration_backend_api_and_batch_contract_draft.md)에서 계속 관리한다.
+- `Rust` 구현 전환 산출물은 [rust_axum_sqlx_adoption_plan.md](./rust_axum_sqlx_adoption_plan.md)에서 관리한다.
+- 새 외부 시스템 연계 절차 가이드는 [integration_adapter_onboarding_guide.md](./integration_adapter_onboarding_guide.md)에서 관리한다.

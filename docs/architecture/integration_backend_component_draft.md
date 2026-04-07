@@ -32,6 +32,16 @@
 - `connector_adapter`: 외부 시스템별 인증, 호출, 페이지네이션, 증분 조회 책임을 가진다.
 - `source_pull_client`: 원천 시스템의 API, `DB`, 파일 기반 연계를 일관된 내부 요청 모델로 감싼다.
 - `sync_cursor_manager`: 시스템별 마지막 동기화 지점과 증분 수집 기준을 관리한다.
+- `adapter_registry`: `source_system` 기준으로 `pull` 어댑터와 `push` 수신 어댑터를 등록하고 조회한다.
+- `push_event_adapter`: 외부 시스템별 webhook 또는 수신 payload 를 공통 원시 적재 입력으로 변환한다.
+
+초기 구현 기준 concrete adapter:
+
+- `jira_pull_adapter`, `jira_push_adapter`: 이슈 검색 응답과 webhook payload 를 공통 원시 적재 입력으로 변환한다.
+- `bitbucket_pull_adapter`, `bitbucket_push_adapter`: `pull request` 조회 응답과 webhook payload 를 공통 원시 적재 입력으로 변환한다.
+- `bamboo_pull_adapter`, `bamboo_push_adapter`: `build result` 조회 응답과 webhook payload 를 공통 원시 적재 입력으로 변환한다.
+- `confluence_pull_adapter`, `confluence_push_adapter`: 페이지/문서 조회 응답과 webhook payload 를 공통 원시 적재 입력으로 변환한다.
+- `reqwest_transport`: concrete adapter 가 공통으로 사용하는 `HTTP` 전송 계층이며, 시스템별 구현은 URL 조합과 응답 파싱에 집중한다.
 
 이 계층은 외부 의존성을 캡슐화하고, 내부 표준 모델을 직접 알지 않는다.
 

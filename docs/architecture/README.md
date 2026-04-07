@@ -24,6 +24,8 @@
 - 시스템 통합 DB 백엔드 API 및 배치 계약 초안: [integration_backend_api_and_batch_contract_draft.md](./integration_backend_api_and_batch_contract_draft.md)
 - 시스템 통합 DB 마이그레이션 및 시드 데이터 운영 전략 초안: [integration_db_migration_and_seed_strategy_draft.md](./integration_db_migration_and_seed_strategy_draft.md)
 - 시스템 통합 DB 초기 구현 순서 및 개발 착수 체크리스트: [integration_backend_implementation_rollout_and_checklist_draft.md](./integration_backend_implementation_rollout_and_checklist_draft.md)
+- 외부 시스템 어댑터 연동 가이드: [integration_adapter_onboarding_guide.md](./integration_adapter_onboarding_guide.md)
+- Rust `axum + sqlx` 채택 계획 초안: [rust_axum_sqlx_adoption_plan.md](./rust_axum_sqlx_adoption_plan.md)
 - 시스템 통합 DB 인증 및 서명 정책 초안: [integration_auth_and_signing_policy_draft.md](./integration_auth_and_signing_policy_draft.md)
 - 시스템 통합 DB 동기화 실행 상태 전이 초안: [integration_run_state_transition_draft.md](./integration_run_state_transition_draft.md)
 - 시스템 통합 DB 워커 슬롯 및 실행 취소/롤백 정책 초안: [integration_worker_slot_and_cancellation_policy_draft.md](./integration_worker_slot_and_cancellation_policy_draft.md)

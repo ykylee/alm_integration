@@ -110,13 +110,15 @@
 ```
 
 ## Build, Test, and Development Commands
-현재 빌드와 테스트 도구는 정해지지 않았다. 스택이 결정되면 새 명령어를 이 문서와 `README`에 함께 기록한다.
+현재 저장소에는 임시 Python 골격과 Rust 1차 골격이 함께 들어가 있으며, 명령은 다음과 같다.
 
-예시:
-
-- `make build` 로컬 빌드 생성
+- `make install-dev` 개발 의존성 설치
+- `make run` 로컬 API 서버 실행
 - `make test` 전체 테스트 실행
-- `make lint` 포매터와 린터 실행
+- `cargo run --manifest-path backend/Cargo.toml` Rust 백엔드 실행
+- `cargo test --manifest-path backend/Cargo.toml` Rust 백엔드 테스트 실행
+
+2026-04-07 기준 1차 검토안은 프론트엔드 `React`, 백엔드 `Rust` 이다. Python 명령은 임시 구조 검증 골격에, `cargo` 명령은 `backend/` 하위 Rust 골격에 적용된다.
 
 가능하면 길고 일회성인 스크립트보다, 소수의 안정적인 진입점 명령을 유지한다.
 
@@ -133,6 +135,13 @@
 
 ## Testing Guidelines
 단순하지 않은 코드에는 자동화 테스트를 추가한다. 테스트 이름은 의도를 분명히 드러내야 한다. 예: `test_login_rejects_invalid_token`
+
+구현 작업 방식은 기본적으로 `TDD` 를 따른다.
+
+- 기능 구현 전에 먼저 단위 테스트 또는 실패하는 테스트를 작성한다.
+- 테스트가 실패하는 것을 확인한 뒤 구현을 시작한다.
+- 구현 후 테스트를 다시 통과시키고, 필요한 리팩터링을 마지막에 수행한다.
+- 새 기능, 상태 전이, 예외 처리, 운영 규칙 변경은 가능하면 테스트 케이스부터 추가한다.
 
 빠른 단위 테스트는 `tests/` 아래에 두고, fixture는 사용하는 테스트와 가까운 위치에 둔다. 커버리지 도구를 도입하면 기준치를 설정 파일에 반영하고 여기에도 기록한다.
 
