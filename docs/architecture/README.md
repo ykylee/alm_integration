@@ -4,7 +4,7 @@
 - 범위: `docs/architecture/` 아래의 아키텍처 초안, 구성도, 데이터 흐름, 설계 계획 문서
 - 대상 독자: 아키텍트, 기획자, 개발자, 운영자
 - 상태: draft
-- 최종 수정일: 2026-04-06
+- 최종 수정일: 2026-04-07
 - 관련 문서: `docs/README.md`, `docs/requirements/system_srs.md`, `docs/overview/project_overview.md`
 
 ## 이 카테고리에서 다루는 내용
@@ -21,6 +21,15 @@
 - 시스템 컨텍스트 및 연계 아키텍처 초안: [system_context_and_integration_draft.md](./system_context_and_integration_draft.md)
 - 핵심 도메인 모델 초안: [domain_model_draft.md](./domain_model_draft.md)
 - 핵심 엔터티 정의 초안: [domain_entity_definition_draft.md](./domain_entity_definition_draft.md)
+- 초기 릴리스 ERD 초안: [initial_release_erd_draft.md](./initial_release_erd_draft.md)
+- 초기 릴리스 물리 모델 초안: [initial_release_physical_model_draft.md](./initial_release_physical_model_draft.md)
+- 초기 릴리스 DDL 초안: [initial_release_ddl_draft.md](./initial_release_ddl_draft.md)
+- 논리 참조 규칙 초안: [logical_reference_rules_draft.md](./logical_reference_rules_draft.md)
+- 다형 참조 무결성 검증 초안: [polymorphic_reference_validation_draft.md](./polymorphic_reference_validation_draft.md)
+- 참조 정합성 점검 배치 및 오류 큐 초안: [reference_integrity_batch_and_error_queue_draft.md](./reference_integrity_batch_and_error_queue_draft.md)
+- 참조 정합성 운영 DDL 초안: [reference_integrity_operations_ddl_draft.md](./reference_integrity_operations_ddl_draft.md)
+- 참조 정합성 대시보드 조회 모델 초안: [reference_integrity_dashboard_query_model_draft.md](./reference_integrity_dashboard_query_model_draft.md)
+- 참조 정합성 대시보드 UI 및 접근 제어 초안: [reference_integrity_dashboard_ui_and_access_draft.md](./reference_integrity_dashboard_ui_and_access_draft.md)
 - 응용 서비스 및 운영 거버넌스 아키텍처 초안: [application_and_governance_architecture_draft.md](./application_and_governance_architecture_draft.md)
 
 ## 다음에 읽을 문서

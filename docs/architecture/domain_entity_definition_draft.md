@@ -111,7 +111,6 @@
   - `project_name`: 프로젝트 표시 이름
   - `project_type`: 관리 대상 여부 등 프로젝트 분류 값
   - `project_status`: 현재 운영 상태
-  - `default_process_model_definition_id`: 기본 프로세스 모델 참조
   - `owning_organization_id`: 주관 조직 참조
   - `project_owner_workforce_id`: 프로젝트 책임자 참조
   - `start_date`: 계획 시작일
@@ -120,7 +119,7 @@
   - `description`: 프로젝트 설명
   - `created_at`: 생성 시각
   - `updated_at`: 최종 수정 시각
-- 비고: 관리 대상/관리 외 프로젝트 공통 엔터티
+- 비고: 관리 대상/관리 외 프로젝트 공통 엔터티. 기본 프로세스 모델은 `project_process_model.is_primary=true` 레코드로 해석하고, `project` 본체에는 중복 보관하지 않는다.
 
 ### 3.2 `project_scope`
 
@@ -1002,3 +1001,222 @@
 - `workflow_status_definition`, `workflow_transition_definition` 을 초기 릴리스 범위에 포함할지
 - `planning_scheme` 의 다중 연결 규칙을 프로젝트별 오버라이드까지 허용할지
 - 읽기 모델 성격이 강한 엔터티를 별도 스냅샷 모델로 더 분리할지
+
+## 11. 초기 릴리스 우선순위 초안
+
+초기 릴리스는 공통 `work_item` 운영, 상태 관리, 계획 연결, 기본 조회와 권한/감사 최소선을 우선 구현하는 기준으로 본다. 따라서 아래 구분은 “초기 구현 필수”와 “후속 확장 또는 선택 적용” 기준으로 정리한다.
+
+### 11.1 초기 릴리스 필수 엔터티
+
+- `project`
+  프로젝트 단위 운영과 소유 경계의 기준이므로 필수
+- `work_item`
+  모든 업무 관리의 기준 엔터티이므로 필수
+- `work_item_type`
+  `epic`, `story`, `task`, `sub-task` 같은 기본 유형 구분에 필요하므로 필수
+- `work_item_hierarchy`
+  상하위 구조 탐색과 집계에 필요하므로 필수
+- `work_item_status_history`
+  현재 상태만으로는 감사와 흐름 추적이 부족하므로 필수
+- `project_process_model`
+  프로젝트별 프로세스 모델과 스킴 상속의 기준이므로 필수
+- `workflow_scheme`
+  상태 체계의 상위 컨테이너이므로 필수
+- `workflow_status_definition`
+  상세 상태와 공통 상태 매핑의 기준이므로 필수
+- `workflow_transition_definition`
+  상태 전이 허용 규칙과 이력 해석 기준에 필요하므로 필수
+- `planning_scheme`
+  반복 단위, 릴리스, 마일스톤, `WBS` 허용 범위를 정하는 기준이므로 필수
+- `work_item_plan_link`
+  계획 단위와 `work_item` 연결 사실을 저장하는 최소 모델이므로 필수
+- `iteration`
+  `Agile` 계열 프로젝트의 기본 운영 단위이므로 초기 범위 포함 권장
+- `release`
+  배포 범위 관리와 품질/승인 집계의 기준이므로 필수
+- `milestone`
+  일정 기준점과 `V-Model` 계열 추적에 필요하므로 필수
+- `role_policy`
+  역할 기반 접근 제어의 최소 기준이므로 필수
+- `permission_scope`
+  데이터 범위와 액션 범위를 구체화하는 최소 정책 모델이므로 필수
+- `audit_log`
+  업무/운영 행위 감사의 최소선이므로 필수
+- `organization_master`
+  소유 조직, 승인 라우팅, 권한 범위 판단에 필요하므로 필수
+- `workforce_master`
+  담당자, 등록자, 승인자 식별에 필요하므로 필수
+- `role_assignment`
+  조직장, 승인권자, 책임자 연결에 필요하므로 필수
+
+### 11.2 초기 릴리스 선택 포함 엔터티
+
+- `wbs_node`
+  `V-Model` 또는 단계형 계획 표현이 강하게 필요하면 초기 포함, 아니면 후속 확장 가능
+- `integration_system`
+  외부 연계 범위가 초기 릴리스에 포함되면 필수, 수기 입력 중심 시작이면 후속 가능
+- `integration_job`
+  자동 동기화까지 초기 포함 시 필요
+- `integration_run`
+  연계 실행 이력 추적이 필요할 때 초기 포함 권장
+- `normalized_record_reference`
+  초기부터 표준화 추적을 강하게 요구하면 포함
+- `exception_case`
+  예외 승인 프로세스를 초기부터 통합 관리하려면 포함
+- `governance_decision`
+  운영 승인/반려 이력을 공통 모델로 바로 묶을 경우 포함
+
+### 11.3 후속 확장 엔터티
+
+- `project_scope`
+  관리 외 프로젝트 전환과 세부 범위 통제가 본격화될 때 확장
+- `project_work_item_policy`
+  프로젝트별 규칙 커스터마이징이 필요해질 때 확장
+- `work_item_external_reference`
+  외부 시스템 매핑 자동화가 본격화될 때 확장
+- `organization_history`
+  조직 개편 이력 관리가 고도화될 때 확장
+- `workforce_assignment_history`
+  소속 이력 기반 분석이 필요해질 때 확장
+- `absence_calendar_entry`
+  개인/조직 가용성 계산이 고도화될 때 확장
+- `identity_mapping`
+  복수 원천 시스템 식별자 정합성 관리가 필요해질 때 확장
+- `organization_change_case`
+  조직 변경 감지와 마이그레이션 검토 프로세스를 자동화할 때 확장
+- `integration_endpoint`
+  연계 설정을 세분화할 때 확장
+- `raw_ingestion_event`
+  원시 수집 메타데이터를 체계적으로 남길 때 확장
+- `sync_error`
+  연계 실패와 재시도 관리를 본격화할 때 확장
+- `review_summary`
+  코드리뷰 메타데이터 통합을 초기 범위에 넣지 않을 경우 후속
+- `build_summary`
+  빌드/배포 연계가 본격화될 때 확장
+- `artifact_metadata`
+  산출물 메타데이터 관리가 필요해질 때 확장
+- `quality_signal`
+  정적분석과 품질 신호를 통합할 때 확장
+- `test_execution_summary`
+  테스트 실행 요약을 내재화할 때 확장
+- `defect_link`
+  결함 연결 관리를 내재화할 때 확장
+- `release_readiness_snapshot`
+  릴리스 준비도 집계 모델을 도입할 때 확장
+- `quality_gate_decision`
+  품질 게이트 승인 이력을 체계화할 때 확장
+- `migration_request`
+  조직 변경 실행 요청을 운영 모델로 고도화할 때 확장
+- `ai_review_draft`
+  `AI` 리뷰 보조를 도입할 때 확장
+- `ai_test_draft`
+  `AI` 테스트 보조를 도입할 때 확장
+- `ai_ci_plan_draft`
+  `AI` `CI` 플랜 보조를 도입할 때 확장
+- `ai_input_context`
+  `AI` 입력 문맥 감사가 필요해질 때 확장
+- `rule_set_reference`
+  규칙셋 버전 추적이 필요해질 때 확장
+- `ai_execution_profile`
+  모델/프롬프트 감사가 필요해질 때 확장
+
+### 11.4 구현 순서 제안
+
+1. `project`, `work_item`, `work_item_type`, `work_item_hierarchy`
+2. `project_process_model`, `workflow_scheme`, `workflow_status_definition`, `workflow_transition_definition`
+3. `planning_scheme`, `iteration`, `release`, `milestone`, `work_item_plan_link`
+4. `organization_master`, `workforce_master`, `role_assignment`, `role_policy`, `permission_scope`, `audit_log`
+5. 이후 연계, 품질, 운영 고도화, `AI` 보조 엔터티 순으로 확장
+
+## 12. 초기 릴리스 필수 엔터티 관계 초안
+
+본 절은 초기 릴리스 필수 엔터티만 대상으로 관계 방향과 기본 `cardinality` 를 정리한 초안이다. 물리 `ERD` 를 확정하기 전의 논리 관계 기준으로 사용한다.
+
+### 12.1 업무 기준 관계
+
+- `project 1:N work_item`
+  하나의 프로젝트는 여러 업무 항목을 가질 수 있고, 업무 항목은 기본적으로 하나의 프로젝트에 소속된다.
+- `work_item_type 1:N work_item`
+  하나의 업무 항목 유형은 여러 업무 항목에 적용될 수 있다.
+- `work_item 1:N work_item_hierarchy` as parent
+  상위 업무 항목은 여러 하위 관계를 가질 수 있다.
+- `work_item 1:N work_item_hierarchy` as child
+  하위 업무 항목도 하나의 상위 관계에 참여하며, 초기 모델에서는 단일 부모를 기본 원칙으로 보는 편이 적절하다.
+- `work_item 1:N work_item_status_history`
+  하나의 업무 항목은 여러 상태 변경 이력을 가진다.
+- `work_item 1:N work_item_plan_link`
+  하나의 업무 항목은 여러 계획 단위와 연결될 수 있다. 다만 실제 허용 범위는 `planning_scheme` 이 제어한다.
+
+### 12.2 프로세스 모델과 상태 관계
+
+- `project 1:N project_process_model`
+  프로젝트는 시점에 따라 여러 프로세스 모델 설정을 가질 수 있으나 동일 시점 기본 활성 모델은 하나만 둔다.
+- `process_model_definition 1:N project_process_model`
+  하나의 프로세스 모델 정의가 여러 프로젝트 설정에 재사용될 수 있다.
+- `workflow_scheme 1:N project_process_model`
+  프로젝트 프로세스 설정은 하나의 상태 스킴을 참조한다.
+- `planning_scheme 1:N project_process_model`
+  프로젝트 프로세스 설정은 하나의 계획 스킴을 참조한다.
+- `workflow_scheme 1:N workflow_status_definition`
+  하나의 상태 스킴은 여러 상세 상태 정의를 가진다.
+- `workflow_scheme 1:N workflow_transition_definition`
+  하나의 상태 스킴은 여러 상태 전이 규칙을 가진다.
+- `workflow_transition_definition 1:N work_item_status_history`
+  하나의 전이 규칙은 여러 상태 변경 이력에서 재사용될 수 있다.
+
+### 12.3 계획 단위 관계
+
+- `planning_scheme 1:N iteration`
+  반복 단위를 사용하는 프로세스 모델에서는 같은 계획 스킴 아래 여러 반복 단위가 생성될 수 있다.
+- `planning_scheme 1:N release`
+  릴리스 단위를 사용하는 프로세스 모델에서는 같은 계획 스킴 아래 여러 릴리스가 생성될 수 있다.
+- `planning_scheme 1:N milestone`
+  마일스톤 단위를 사용하는 프로세스 모델에서는 같은 계획 스킴 아래 여러 마일스톤이 생성될 수 있다.
+- `project 1:N iteration`
+  하나의 프로젝트는 여러 반복 단위를 가질 수 있다.
+- `project 1:N release`
+  하나의 프로젝트는 여러 릴리스를 가질 수 있다.
+- `project 1:N milestone`
+  하나의 프로젝트는 여러 마일스톤을 가질 수 있다.
+- `iteration 1:N work_item_plan_link`
+  반복 단위는 여러 업무 항목 연결을 가질 수 있다.
+- `release 1:N work_item_plan_link`
+  릴리스는 여러 업무 항목 연결을 가질 수 있다.
+- `milestone 1:N work_item_plan_link`
+  마일스톤은 여러 업무 항목 연결을 가질 수 있다.
+
+### 12.4 조직과 권한 관계
+
+- `organization_master 1:N project`
+  하나의 조직이 여러 프로젝트를 주관할 수 있다.
+- `organization_master 1:N work_item`
+  하나의 조직이 여러 업무 항목의 소유 조직이 될 수 있다.
+- `organization_master 1:N workforce_master`
+  하나의 조직에 여러 인력이 소속될 수 있다.
+- `workforce_master 1:N project` as owner
+  하나의 인력이 여러 프로젝트의 책임자가 될 수 있다.
+- `workforce_master 1:N work_item` as assignee/reporter
+  하나의 인력이 여러 업무 항목의 담당자 또는 등록자가 될 수 있다.
+- `workforce_master 1:N role_assignment`
+  하나의 인력이 여러 역할 배정 기록을 가질 수 있다.
+- `role_policy 1:N permission_scope`
+  하나의 역할 정책은 여러 권한 범위 규칙을 가진다.
+- `role_assignment N:1 role_policy`
+  역할 배정은 하나의 역할 정책에 매핑되는 구조로 상세화하는 편이 적절하다.
+
+### 12.5 감사 관계
+
+- `project 1:N audit_log`
+  프로젝트 수준 행위는 감사 로그로 남길 수 있어야 한다.
+- `work_item 1:N audit_log`
+  업무 항목 수준 행위는 감사 로그로 남길 수 있어야 한다.
+- `workforce_master 1:N audit_log` as actor
+  인력은 여러 감사 이벤트의 행위자가 될 수 있다.
+
+### 12.6 구현 시 유의사항
+
+- `work_item_hierarchy` 는 초기 모델에서 순환 참조를 허용하지 않는 제약이 필요하다.
+- `work_item_status_history` 는 현재 상태와 모순되지 않도록 최신 이력과 `work_item` 본체 상태를 일관되게 유지해야 한다.
+- `project_process_model` 은 동일 시점에 `is_primary=true` 인 레코드가 하나만 존재하도록 제약이 필요하다.
+- `work_item_plan_link` 의 다중 연결 허용 여부는 `planning_scheme` 규칙과 함께 검증되어야 한다.
