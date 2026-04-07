@@ -55,6 +55,7 @@
 
 - [integration_system](#51-integration_system)
 - [integration_endpoint](#52-integration_endpoint)
+- [integration_credential](#58-integration_credential)
 - [integration_job](#53-integration_job)
 - [integration_run](#54-integration_run)
 - [raw_ingestion_event](#55-raw_ingestion_event)
@@ -473,7 +474,7 @@
   - `owner_team`: 운영 책임 조직 또는 팀
   - `created_at`: 생성 시각
   - `updated_at`: 최종 수정 시각
-- 비고: 유형, 인증, 상태 관리
+- 비고: 유형, 인증, 상태 관리. 실제 접속 대상과 자격증명은 `integration_endpoint`, `integration_credential` 에서 분리 관리한다.
 
 ### 5.2 `integration_endpoint`
 
@@ -483,12 +484,35 @@
   - `integration_system_id`: 대상 시스템 참조
   - `endpoint_type`: 엔드포인트 유형
   - `endpoint_name`: 엔드포인트 이름
+  - `base_url`: 외부 시스템 접속 기본 URL
   - `resource_path`: 접근 자원 경로
   - `request_method`: 호출 방식
+  - `credential_binding_mode`: 자격증명 연결 방식
   - `is_active`: 활성 여부
   - `created_at`: 생성 시각
   - `updated_at`: 최종 수정 시각
-- 비고: API, DB, 파일 등
+- 비고: API, DB, 파일 등 접속 대상을 정의한다. 실제 민감정보는 별도 자격증명 엔터티에서 암호화 저장한다.
+
+### 5.8 `integration_credential`
+
+- 목적: 외부 시스템 연결 자격증명과 민감정보 보관 정책 정의
+- 핵심 식별자: `integration_credential_id`
+- 주요 속성:
+  - `integration_system_id`: 대상 시스템 참조
+  - `integration_endpoint_id`: 연결 대상 엔드포인트 참조
+  - `credential_type`: `basic`, `token`, `oauth_client`, `api_key` 등 자격증명 유형
+  - `principal_id`: 계정 `id`, `client id`, 사용자 식별자 등 비민감 식별 정보
+  - `secret_ciphertext`: 암호화된 비밀번호, `token`, `client secret`
+  - `secret_key_version`: 암호화 키 버전
+  - `secret_fingerprint`: 중복 판정 또는 변경 감지용 요약 값
+  - `rotation_status`: 교체 필요 또는 교체 완료 상태
+  - `effective_from`: 적용 시작 시점
+  - `effective_to`: 적용 종료 시점
+  - `last_validated_at`: 마지막 검증 시각
+  - `last_updated_by`: 마지막 변경 주체
+  - `created_at`: 생성 시각
+  - `updated_at`: 최종 수정 시각
+- 비고: 민감정보는 평문 저장하지 않고 암호화 저장을 원칙으로 한다. 화면/API 응답에는 `principal_id` 와 마스킹된 상태 요약만 노출한다.
 
 ### 5.3 `integration_job`
 

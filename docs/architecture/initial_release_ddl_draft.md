@@ -257,6 +257,249 @@ create index ix_workflow_scheme_process_model
   on workflow_scheme (process_model_definition_id);
 ```
 
+## 5. 연계 및 수집
+
+### 5.1 `integration_system`
+
+```sql
+create table integration_system (
+  integration_system_id uuid primary key,
+  system_code varchar(50) not null,
+  system_name varchar(100) not null,
+  system_type varchar(50) not null,
+  authentication_type varchar(50) not null,
+  connection_status varchar(30) not null,
+  owner_team varchar(100) null,
+  created_at timestamptz not null,
+  updated_at timestamptz not null,
+  constraint ux_integration_system_code unique (system_code)
+);
+
+create index ix_integration_system_type
+  on integration_system (system_type);
+
+create index ix_integration_system_status
+  on integration_system (connection_status);
+```
+
+### 5.2 `integration_endpoint`
+
+```sql
+create table integration_endpoint (
+  integration_endpoint_id uuid primary key,
+  integration_system_id uuid not null,
+  endpoint_type varchar(30) not null,
+  endpoint_name varchar(100) not null,
+  base_url varchar(500) not null,
+  resource_path varchar(500) null,
+  request_method varchar(20) null,
+  credential_binding_mode varchar(30) not null,
+  is_active boolean not null default true,
+  created_at timestamptz not null,
+  updated_at timestamptz not null,
+  constraint ux_integration_endpoint_name
+    unique (integration_system_id, endpoint_name),
+  constraint fk_integration_endpoint_system
+    foreign key (integration_system_id)
+    references integration_system (integration_system_id)
+);
+
+create index ix_integration_endpoint_system_id
+  on integration_endpoint (integration_system_id);
+
+create index ix_integration_endpoint_active
+  on integration_endpoint (is_active);
+```
+
+### 5.3 `integration_credential`
+
+```sql
+create table integration_credential (
+  integration_credential_id uuid primary key,
+  integration_system_id uuid not null,
+  integration_endpoint_id uuid not null,
+  credential_type varchar(50) not null,
+  principal_id varchar(200) null,
+  secret_ciphertext text not null,
+  secret_key_version varchar(50) not null,
+  secret_fingerprint varchar(100) null,
+  rotation_status varchar(30) not null,
+  effective_from timestamptz not null,
+  effective_to timestamptz null,
+  last_validated_at timestamptz null,
+  last_updated_by varchar(100) null,
+  created_at timestamptz not null,
+  updated_at timestamptz not null,
+  constraint fk_integration_credential_system
+    foreign key (integration_system_id)
+    references integration_system (integration_system_id),
+  constraint fk_integration_credential_endpoint
+    foreign key (integration_endpoint_id)
+    references integration_endpoint (integration_endpoint_id)
+);
+
+create index ix_integration_credential_endpoint_id
+  on integration_credential (integration_endpoint_id);
+
+create index ix_integration_credential_rotation_status
+  on integration_credential (rotation_status);
+
+create index ix_integration_credential_effective_period
+  on integration_credential (effective_from, effective_to);
+```
+
+### 5.4 `integration_job`
+
+```sql
+create table integration_job (
+  integration_job_id uuid primary key,
+  integration_system_id uuid not null,
+  job_code varchar(50) not null,
+  job_name varchar(100) not null,
+  trigger_type varchar(30) not null,
+  schedule_expression varchar(100) null,
+  job_status varchar(30) not null,
+  created_at timestamptz not null,
+  updated_at timestamptz not null,
+  constraint ux_integration_job_code
+    unique (integration_system_id, job_code),
+  constraint fk_integration_job_system
+    foreign key (integration_system_id)
+    references integration_system (integration_system_id)
+);
+```
+
+### 5.5 `integration_run`
+
+```sql
+create table integration_run (
+  integration_run_id uuid primary key,
+  integration_job_id uuid not null,
+  queued_at timestamptz not null,
+  started_at timestamptz null,
+  ended_at timestamptz null,
+  run_status varchar(30) not null,
+  status_reason_code varchar(50) null,
+  status_reason_message text null,
+  cancel_requested_at timestamptz null,
+  cancel_requested_by varchar(100) null,
+  cancel_reason_code varchar(50) null,
+  processed_count integer not null default 0,
+  success_count integer not null default 0,
+  failure_count integer not null default 0,
+  pending_count integer not null default 0,
+  triggered_by varchar(100) null,
+  retry_of_run_id uuid null,
+  created_at timestamptz not null,
+  constraint fk_integration_run_job
+    foreign key (integration_job_id)
+    references integration_job (integration_job_id),
+  constraint fk_integration_run_retry_of
+    foreign key (retry_of_run_id)
+    references integration_run (integration_run_id),
+  constraint ck_integration_run_status
+    check (run_status in ('queued', 'running', 'partially_completed', 'completed', 'failed', 'cancelled'))
+);
+
+create index ix_integration_run_job_id
+  on integration_run (integration_job_id);
+
+create index ix_integration_run_status
+  on integration_run (run_status);
+
+create index ix_integration_run_started_at
+  on integration_run (started_at);
+
+create index ix_integration_run_cancel_requested_at
+  on integration_run (cancel_requested_at);
+
+create index ix_integration_run_retry_of_run_id
+  on integration_run (retry_of_run_id);
+```
+
+### 5.6 `raw_ingestion_event`
+
+```sql
+create table raw_ingestion_event (
+  raw_ingestion_event_id uuid primary key,
+  integration_run_id uuid not null,
+  source_system varchar(50) not null,
+  source_object_type varchar(50) not null,
+  source_object_id varchar(200) not null,
+  source_event_key varchar(200) not null,
+  source_version varchar(100) null,
+  source_sequence_no bigint null,
+  source_updated_at timestamptz null,
+  source_record_key varchar(200) null,
+  payload_reference text not null,
+  payload_hash varchar(100) not null,
+  ingested_at timestamptz not null,
+  normalization_status varchar(30) not null,
+  created_at timestamptz not null,
+  constraint fk_raw_ingestion_event_run
+    foreign key (integration_run_id)
+    references integration_run (integration_run_id),
+  constraint ux_raw_ingestion_event_idempotency
+    unique (source_system, source_object_type, source_object_id, source_event_key)
+);
+
+create index ix_raw_ingestion_event_run_id
+  on raw_ingestion_event (integration_run_id);
+
+create index ix_raw_ingestion_event_normalization_status
+  on raw_ingestion_event (normalization_status);
+```
+
+### 5.7 `normalized_record_reference`
+
+```sql
+create table normalized_record_reference (
+  normalized_record_reference_id uuid primary key,
+  raw_ingestion_event_id uuid not null,
+  target_entity_type varchar(50) not null,
+  target_entity_id uuid not null,
+  normalization_version varchar(50) not null,
+  normalized_at timestamptz not null,
+  created_at timestamptz not null,
+  constraint ux_normalized_record_reference
+    unique (raw_ingestion_event_id, target_entity_type, target_entity_id),
+  constraint fk_normalized_record_reference_raw
+    foreign key (raw_ingestion_event_id)
+    references raw_ingestion_event (raw_ingestion_event_id)
+);
+
+create index ix_normalized_record_reference_raw_id
+  on normalized_record_reference (raw_ingestion_event_id);
+
+create index ix_normalized_record_reference_target
+  on normalized_record_reference (target_entity_type, target_entity_id);
+```
+
+### 5.8 `sync_error`
+
+```sql
+create table sync_error (
+  sync_error_id uuid primary key,
+  integration_run_id uuid not null,
+  error_code varchar(50) not null,
+  error_message text not null,
+  error_type varchar(50) not null,
+  retry_status varchar(30) not null,
+  resolved_at timestamptz null,
+  created_at timestamptz not null,
+  updated_at timestamptz not null,
+  constraint fk_sync_error_run
+    foreign key (integration_run_id)
+    references integration_run (integration_run_id)
+);
+
+create index ix_sync_error_run_id
+  on sync_error (integration_run_id);
+
+create index ix_sync_error_retry_status
+  on sync_error (retry_status);
+```
+
 ### 4.3 `workflow_status_definition`
 
 ```sql

@@ -258,6 +258,213 @@
   - `uses_milestone`: 마일스톤 사용 여부
   - `uses_wbs`: `WBS` 사용 여부
   - `allows_parallel_tracks`: 병렬 계획 허용 여부
+
+## 4. 연계 및 수집 저장 모델 초안
+
+### 4.1 `integration_system`
+
+- 목적: 연계 대상 외부 시스템 정의 저장
+- 기본키: `integration_system_id`
+- 후보 유니크키:
+  - `system_code`
+- 주요 컬럼:
+  - `integration_system_id`: 내부 기본키
+  - `system_code`: 시스템 식별 코드
+  - `system_name`: 시스템 이름
+  - `system_type`: 시스템 유형
+  - `authentication_type`: 기본 인증 방식
+  - `connection_status`: 현재 연결 상태
+  - `owner_team`: 운영 책임 팀 또는 조직
+  - `created_at`: 생성 시각
+  - `updated_at`: 최종 수정 시각
+- 초기 인덱스:
+  - `ux_integration_system_code`
+  - `ix_integration_system_type`
+  - `ix_integration_system_status`
+
+### 4.2 `integration_endpoint`
+
+- 목적: 외부 시스템 접속 대상 URL 및 자원 경로 저장
+- 기본키: `integration_endpoint_id`
+- 후보 유니크키:
+  - `(integration_system_id, endpoint_name)`
+- 주요 컬럼:
+  - `integration_endpoint_id`: 내부 기본키
+  - `integration_system_id`: 대상 시스템 식별자
+  - `endpoint_type`: `api`, `db`, `file`, `webhook` 등 엔드포인트 유형
+  - `endpoint_name`: 엔드포인트 이름
+  - `base_url`: 접속 기본 URL
+  - `resource_path`: 자원 경로
+  - `request_method`: 기본 호출 방식
+  - `credential_binding_mode`: 자격증명 연결 방식
+  - `is_active`: 활성 여부
+  - `created_at`: 생성 시각
+  - `updated_at`: 최종 수정 시각
+- 직접 참조:
+  - `integration_system_id -> integration_system.integration_system_id`
+- 초기 인덱스:
+  - `ux_integration_endpoint_name`
+  - `ix_integration_endpoint_system_id`
+  - `ix_integration_endpoint_active`
+
+### 4.3 `integration_credential`
+
+- 목적: 외부 시스템 자격증명과 암호화 저장 메타데이터 관리
+- 기본키: `integration_credential_id`
+- 후보 유니크키:
+  - `(integration_endpoint_id, credential_type, effective_from)`
+- 주요 컬럼:
+  - `integration_credential_id`: 내부 기본키
+  - `integration_system_id`: 대상 시스템 식별자
+  - `integration_endpoint_id`: 연결 대상 엔드포인트 식별자
+  - `credential_type`: `basic`, `token`, `oauth_client`, `api_key` 등 자격증명 유형
+  - `principal_id`: 계정 `id`, `client id` 등 비민감 식별자
+  - `secret_ciphertext`: 암호화된 secret
+  - `secret_key_version`: 암호화 키 버전
+  - `secret_fingerprint`: 변경 감지용 요약 값
+  - `rotation_status`: 키 또는 자격증명 교체 상태
+  - `effective_from`: 적용 시작 시점
+  - `effective_to`: 적용 종료 시점
+  - `last_validated_at`: 마지막 검증 시각
+  - `last_updated_by`: 마지막 변경 주체
+  - `created_at`: 생성 시각
+  - `updated_at`: 최종 수정 시각
+- 직접 참조:
+  - `integration_system_id -> integration_system.integration_system_id`
+  - `integration_endpoint_id -> integration_endpoint.integration_endpoint_id`
+- 초기 인덱스:
+  - `ix_integration_credential_endpoint_id`
+  - `ix_integration_credential_rotation_status`
+  - `ix_integration_credential_effective_period`
+- 비고:
+  - 민감정보는 평문 보관하지 않고 `secret_ciphertext` 만 저장한다.
+  - `principal_id` 는 필요 시 마스킹 저장 또는 최소 노출 정책을 적용한다.
+
+### 4.4 `integration_job`
+
+- 목적: 동기화 작업 정의 저장
+- 기본키: `integration_job_id`
+- 후보 유니크키:
+  - `(integration_system_id, job_code)`
+- 주요 컬럼:
+  - `integration_job_id`: 내부 기본키
+  - `integration_system_id`: 대상 시스템 식별자
+  - `job_code`: 작업 코드
+  - `job_name`: 작업 이름
+  - `trigger_type`: `schedule`, `manual`, `event`
+  - `schedule_expression`: 스케줄 표현식
+  - `job_status`: 작업 상태
+  - `created_at`: 생성 시각
+  - `updated_at`: 최종 수정 시각
+- 직접 참조:
+  - `integration_system_id -> integration_system.integration_system_id`
+
+### 4.5 `integration_run`
+
+- 목적: 작업 실행 이력 저장
+- 기본키: `integration_run_id`
+- 후보 유니크키:
+  - `external_run_key` 선택 적용 가능
+- 주요 컬럼:
+  - `integration_run_id`: 내부 기본키
+  - `integration_job_id`: 실행된 작업 식별자
+  - `queued_at`: 실행 요청이 접수된 시각
+  - `started_at`: 실제 실행 시작 시각, `queued` 상태에서는 비어 있을 수 있음
+  - `ended_at`: 종료 시각
+  - `run_status`: 실행 상태
+  - `status_reason_code`: 현재 상태 전이의 주된 사유 코드
+  - `status_reason_message`: 운영 확인용 상태 사유 메시지
+  - `cancel_requested_at`: 취소 요청이 접수된 시각
+  - `cancel_requested_by`: 취소 요청 주체
+  - `cancel_reason_code`: 취소 요청 사유 코드
+  - `processed_count`: 처리 건수
+  - `success_count`: 성공 건수
+  - `failure_count`: 실패 건수
+  - `pending_count`: 보류 또는 재처리 대기 건수
+  - `triggered_by`: 실행 요청 주체
+  - `retry_of_run_id`: 재시도인 경우 원본 실행 식별자
+  - `created_at`: 생성 시각
+- 직접 참조:
+  - `integration_job_id -> integration_job.integration_job_id`
+  - `retry_of_run_id -> integration_run.integration_run_id`
+- 초기 인덱스:
+  - `ix_integration_run_job_id`
+  - `ix_integration_run_status`
+  - `ix_integration_run_started_at`
+  - `ix_integration_run_cancel_requested_at`
+  - `ix_integration_run_retry_of_run_id`
+
+### 4.6 `raw_ingestion_event`
+
+- 목적: 원시 수집 이벤트와 멱등 메타데이터 저장
+- 기본키: `raw_ingestion_event_id`
+- 후보 유니크키:
+  - `(integration_run_id, source_record_key, payload_hash)` 선택 적용 가능
+  - `(source_system, source_object_type, source_object_id, source_event_key)` 멱등 키
+- 주요 컬럼:
+  - `raw_ingestion_event_id`: 내부 기본키
+  - `integration_run_id`: 수집 실행 식별자
+  - `source_system`: 원천 시스템 코드
+  - `source_object_type`: 원천 객체 유형
+  - `source_object_id`: 원천 객체 식별자
+  - `source_event_key`: 멱등 수집 키
+  - `source_version`: 원천 버전
+  - `source_sequence_no`: 원천 시퀀스 번호
+  - `source_updated_at`: 원천 수정 시각
+  - `source_record_key`: 원천 레코드 키
+  - `payload_reference`: 원문 저장 위치
+  - `payload_hash`: 원문 해시
+  - `ingested_at`: 수집 시각
+  - `normalization_status`: 표준화 상태
+  - `created_at`: 생성 시각
+- 직접 참조:
+  - `integration_run_id -> integration_run.integration_run_id`
+- 초기 인덱스:
+  - `ux_raw_ingestion_event_idempotency`
+  - `ix_raw_ingestion_event_run_id`
+  - `ix_raw_ingestion_event_normalization_status`
+
+### 4.7 `normalized_record_reference`
+
+- 목적: 표준화 결과와 내부 대상 엔터티 연결 저장
+- 기본키: `normalized_record_reference_id`
+- 후보 유니크키:
+  - `(raw_ingestion_event_id, target_entity_type, target_entity_id)`
+- 주요 컬럼:
+  - `normalized_record_reference_id`: 내부 기본키
+  - `raw_ingestion_event_id`: 원시 이벤트 식별자
+  - `target_entity_type`: 연결 대상 엔터티 유형
+  - `target_entity_id`: 연결 대상 엔터티 식별자
+  - `normalization_version`: 표준화 규칙 버전
+  - `normalized_at`: 표준화 시각
+  - `created_at`: 생성 시각
+- 직접 참조:
+  - `raw_ingestion_event_id -> raw_ingestion_event.raw_ingestion_event_id`
+- 초기 인덱스:
+  - `ix_normalized_record_reference_raw_id`
+  - `ix_normalized_record_reference_target`
+
+### 4.8 `sync_error`
+
+- 목적: 수집/표준화/반영 오류 저장
+- 기본키: `sync_error_id`
+- 후보 유니크키:
+  - 없음
+- 주요 컬럼:
+  - `sync_error_id`: 내부 기본키
+  - `integration_run_id`: 실행 식별자
+  - `error_code`: 오류 코드
+  - `error_message`: 오류 메시지
+  - `error_type`: 오류 유형
+  - `retry_status`: 재시도 상태
+  - `resolved_at`: 해결 시각
+  - `created_at`: 생성 시각
+  - `updated_at`: 최종 수정 시각
+- 직접 참조:
+  - `integration_run_id -> integration_run.integration_run_id`
+- 초기 인덱스:
+  - `ix_sync_error_run_id`
+  - `ix_sync_error_retry_status`
   - `is_default`: 기본 스킴 여부
   - `version`: 스킴 버전
   - `created_at`: 생성 시각
