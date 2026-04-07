@@ -101,6 +101,9 @@ impl RawIngestionRepository {
         input: CreateRawIngestionEventInput,
     ) -> Result<RawIngestionAcceptedRecord, RawIngestionRepositoryError> {
         let source_updated_at = parse_optional_timestamp(input.source_updated_at.as_deref())?;
+        let normalization_status = self
+            .determine_normalization_status(&input, source_updated_at)
+            .await?;
         let payload_text = serde_json::to_string(&input.payload).expect("payload should serialize");
         let payload_hash = hash_payload(&payload_text);
         let job_id = self.ensure_push_ingestion_job().await?;
@@ -120,6 +123,7 @@ impl RawIngestionRepository {
                 None,
                 &input,
                 source_updated_at,
+                &normalization_status,
                 payload_text,
                 payload_hash,
             )
@@ -135,6 +139,9 @@ impl RawIngestionRepository {
         input: CreateRawIngestionEventInput,
     ) -> Result<RawIngestionAcceptedRecord, RawIngestionRepositoryError> {
         let source_updated_at = parse_optional_timestamp(input.source_updated_at.as_deref())?;
+        let normalization_status = self
+            .determine_normalization_status(&input, source_updated_at)
+            .await?;
         let payload_text = serde_json::to_string(&input.payload).expect("payload should serialize");
         let payload_hash = hash_payload(&payload_text);
         let run_row = sqlx::query(
@@ -156,6 +163,7 @@ impl RawIngestionRepository {
             None,
             &input,
             source_updated_at,
+            &normalization_status,
             payload_text,
             payload_hash,
         )
@@ -172,6 +180,7 @@ impl RawIngestionRepository {
         run_reason: Option<String>,
         input: &CreateRawIngestionEventInput,
         source_updated_at: Option<DateTime<Utc>>,
+        normalization_status: &str,
         payload_text: String,
         payload_hash: String,
     ) -> Result<RawIngestionAcceptedRecord, RawIngestionRepositoryError> {
@@ -278,7 +287,7 @@ impl RawIngestionRepository {
               created_at
             )
             values (
-              $1, $2, $3, $4, $5, $6, $7, null, $8, null, $9, $10, $11, 'pending', $11
+              $1, $2, $3, $4, $5, $6, $7, null, $8, null, $9, $10, $11, $12, $11
             )
             "#,
         )
@@ -293,6 +302,7 @@ impl RawIngestionRepository {
         .bind(payload_text)
         .bind(payload_hash)
         .bind(now)
+        .bind(normalization_status)
         .execute(&mut *tx)
         .await?;
 
@@ -350,6 +360,43 @@ impl RawIngestionRepository {
         .await
         .map_err(Into::into)
     }
+
+    async fn determine_normalization_status(
+        &self,
+        input: &CreateRawIngestionEventInput,
+        source_updated_at: Option<DateTime<Utc>>,
+    ) -> Result<String, RawIngestionRepositoryError> {
+        if payload_has_missing_reference(&input.payload) {
+            return Ok("pending_reference".to_string());
+        }
+
+        if let Some(updated_at) = source_updated_at {
+            let newer_event_exists = sqlx::query_scalar::<_, bool>(
+                r#"
+                select exists(
+                  select 1
+                  from raw_ingestion_event
+                  where source_system = $1
+                    and source_object_type = $2
+                    and source_object_id = $3
+                    and source_updated_at > $4
+                )
+                "#,
+            )
+            .bind(&input.source_system)
+            .bind(&input.source_object_type)
+            .bind(&input.source_object_id)
+            .bind(updated_at)
+            .fetch_one(&self.pool)
+            .await?;
+
+            if newer_event_exists {
+                return Ok("stale".to_string());
+            }
+        }
+
+        Ok("pending".to_string())
+    }
 }
 
 fn parse_optional_timestamp(
@@ -368,4 +415,18 @@ fn hash_payload(payload_text: &str) -> String {
     let mut hasher = Sha256::new();
     hasher.update(payload_text.as_bytes());
     format!("{:x}", hasher.finalize())
+}
+
+fn payload_has_missing_reference(payload: &serde_json::Value) -> bool {
+    payload
+        .get("references")
+        .and_then(|references| references.get("missing"))
+        .and_then(|missing| missing.as_array())
+        .map(|missing| !missing.is_empty())
+        .unwrap_or(false)
+        || payload
+            .get("meta")
+            .and_then(|meta| meta.get("pending_reference"))
+            .and_then(|pending| pending.as_bool())
+            .unwrap_or(false)
 }

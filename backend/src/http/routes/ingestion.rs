@@ -1,8 +1,11 @@
+use axum::body::Bytes;
+use axum::http::HeaderMap;
 use axum::{Json, Router, extract::State, http::StatusCode, routing::post};
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::{AdapterError, PushAdapterRequest};
 use crate::app_state::AppState;
+use crate::security::ingestion_auth::{IngestionAuthError, verify_ingestion_request};
 use crate::services::raw_ingestion::{
     CreateRawIngestionEventInput, RawIngestionRepository, RawIngestionRepositoryError,
 };
@@ -35,8 +38,23 @@ pub fn router() -> Router<AppState> {
 
 async fn create_ingestion_event(
     State(state): State<AppState>,
-    Json(request): Json<IngestionEventRequest>,
+    headers: HeaderMap,
+    body: Bytes,
 ) -> Result<(StatusCode, Json<IngestionEventResponse>), (StatusCode, &'static str)> {
+    let request: IngestionEventRequest =
+        serde_json::from_slice(&body).map_err(|_| (StatusCode::BAD_REQUEST, "INVALID_JSON"))?;
+
+    verify_ingestion_request(
+        &state.ingestion_auth_registry,
+        &request.source_system,
+        &headers,
+        &axum::http::Method::POST,
+        "/api/v1/ingestion/events",
+        &body,
+        chrono::Utc::now(),
+    )
+    .map_err(map_ingestion_auth_error)?;
+
     let input = if let Some(adapter) = state
         .adapter_registry
         .get_push_adapter(&request.source_system)
@@ -108,5 +126,25 @@ fn map_adapter_error(error: AdapterError) -> (StatusCode, &'static str) {
         }
         AdapterError::InvalidPayload(_) => (StatusCode::BAD_REQUEST, "INVALID_PAYLOAD"),
         AdapterError::ExternalCall(_) => (StatusCode::BAD_GATEWAY, "EXTERNAL_CALL_FAILED"),
+    }
+}
+
+fn map_ingestion_auth_error(error: IngestionAuthError) -> (StatusCode, &'static str) {
+    match error {
+        IngestionAuthError::MissingHeader(_) => {
+            (StatusCode::UNAUTHORIZED, "MISSING_AUTH_HEADER")
+        }
+        IngestionAuthError::SourceSystemMismatch => {
+            (StatusCode::FORBIDDEN, "SOURCE_SYSTEM_MISMATCH")
+        }
+        IngestionAuthError::InvalidTimestamp => {
+            (StatusCode::UNAUTHORIZED, "INVALID_SIGNATURE_TIMESTAMP")
+        }
+        IngestionAuthError::TimestampExpired => {
+            (StatusCode::UNAUTHORIZED, "SIGNATURE_TIMESTAMP_EXPIRED")
+        }
+        IngestionAuthError::InvalidSignature => {
+            (StatusCode::UNAUTHORIZED, "INVALID_SIGNATURE")
+        }
     }
 }

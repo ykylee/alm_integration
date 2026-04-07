@@ -227,9 +227,9 @@
 
 ### 4.4 API/운영 준비
 
-- [ ] `ingestion_api` 인증 방식 초안을 정했다.
+- [x] `ingestion_api` 인증 방식 초안을 정했다.
 - [ ] 외부 시스템 연결 정보 등록/수정 UI 또는 관리자 API 경로를 정했다.
-- [ ] 자격증명(`password`, `token`, `client secret`) 암호화 저장 방식을 정했다.
+- [x] 자격증명(`password`, `token`, `client secret`) 암호화 저장 방식을 정했다.
 - [ ] 화면/API/log 에서 민감정보 마스킹 규칙을 정했다.
 - [ ] 실행 취소 요청 시 `cancelled` 와 `partially_completed` 판정 기준을 팀 내에서 합의했다.
 - [ ] 취소 시 롤백하지 않을 대상(`raw_ingestion_event`, `audit_log`, 실행 이력)을 팀 내에서 합의했다.
@@ -247,7 +247,7 @@
 - [x] 빈 데이터베이스 부트스트랩 테스트 시나리오를 정의했다.
 - [x] `push` 수신 후 원시 적재까지의 통합 테스트 시나리오를 정의했다.
 - [x] `pull` 실행 후 원시 적재까지의 통합 테스트 시나리오를 정의했다.
-- [ ] 중복 이벤트, 늦게 도착한 이벤트, 참조 누락 이벤트 테스트 케이스를 정의했다.
+- [x] 중복 이벤트, 늦게 도착한 이벤트, 참조 누락 이벤트 테스트 케이스를 정의했다.
 
 ## 6. 최근 진행 메모
 
@@ -263,6 +263,9 @@
 - 2026-04-07 concrete adapter 단위 테스트와 레지스트리 기반 통합 테스트를 보강했고, 전체 `cargo test --manifest-path backend/Cargo.toml` 통과를 확인했다.
 - 2026-04-07 기본 registry 생성을 `AdapterEndpointConfig` 기반 builder 로 재구성해, 환경변수 직접 참조와 후속 `integration_endpoint` 로더 경로가 같은 조립 함수를 재사용할 수 있게 정리했다.
 - 2026-04-07 `integration_system`, `integration_endpoint`, `integration_credential` 최소 마이그레이션과 `DbAdapterConfigLoader` 를 추가해 앱 시작 시 DB 설정 기반 registry 를 우선 사용하고, DB 설정이 없을 때만 환경변수 기반 registry 로 fallback 하도록 연결했다.
+- 2026-04-07 `secret_ciphertext` 복호화 서비스와 `DbAdapterConfigLoader` 연계를 추가해 DB 자격증명을 adapter 및 `push` 서명 검증 secret 으로 주입할 수 있게 정리했다.
+- 2026-04-07 `RawIngestionRepository` 에 늦게 도착한 이벤트의 `stale`, 참조 미충족 payload 의 `pending_reference` 상태 판정 로직과 테스트를 추가했다.
+- 2026-04-07 `POST /api/v1/ingestion/events` 에 `HMAC-SHA256` 기반 서명 검증과 필수 헤더 검사를 추가했다.
 
 ## 5. 구현 착수 전 최종 게이트
 

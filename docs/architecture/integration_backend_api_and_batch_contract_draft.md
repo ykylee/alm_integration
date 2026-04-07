@@ -90,6 +90,15 @@
 - 처리 원칙:
   - 인증, 기본 스키마 검증, 멱등 키 판정까지만 동기 수행
   - 도메인 반영은 내부 파이프라인으로 위임
+- 필수 헤더:
+  - `X-Source-System`
+  - `X-Signature`
+  - `X-Signature-Timestamp`
+  - `X-Idempotency-Key`
+- 서명 규칙:
+  - `HMAC-SHA256`
+  - 서명 대상 문자열: `timestamp + "\\n" + method + "\\n" + path + "\\n" + sha256(body)`
+  - 서명 헤더 형식: `sha256=<hex>`
 
 요청 예시:
 

@@ -44,8 +44,24 @@
 - `make install-dev` 임시 Python 골격 개발 의존성 설치
 - `make run` 임시 Python API 서버 실행
 - `make test` 임시 Python 테스트 실행
+- `make infra-up` 로컬 `PostgreSQL` 컨테이너 실행
+- `make infra-down` 로컬 `PostgreSQL` 컨테이너 종료
+- `make backend-run` Rust 백엔드 실행
+- `make backend-test` Rust 백엔드 테스트 실행
 - `cargo run --manifest-path backend/Cargo.toml` Rust 백엔드 실행
 - `cargo test --manifest-path backend/Cargo.toml` Rust 백엔드 테스트 실행
+
+## 로컬 백엔드 개발 환경
+
+Rust 백엔드 검증은 로컬 `PostgreSQL` 이 필요합니다. 기본 개발 환경은 저장소 루트의 [`docker-compose.yml`](./docker-compose.yml) 과 [`.env.example`](./.env.example) 를 기준으로 맞춥니다.
+
+기본 절차:
+
+- `make infra-up`
+- `export $(grep -v '^#' .env.example | xargs)`
+- `make backend-test`
+
+테스트에서 임시 DB 생성 경로를 사용하므로 `ALM_BACKEND_TEST_DATABASE_ADMIN_URL` 은 `postgres` 데이터베이스를 가리켜야 합니다.
 
 ## 기술 스택 검토 상태
 

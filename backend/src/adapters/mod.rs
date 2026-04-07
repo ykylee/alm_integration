@@ -45,6 +45,7 @@ pub struct AdapterEndpointConfig {
     pub source_system: String,
     pub base_url: Option<String>,
     pub bearer_token: Option<String>,
+    pub push_signing_secret: Option<String>,
     pub enable_pull: bool,
     pub enable_push: bool,
 }
@@ -241,12 +242,15 @@ fn build_push_adapter(source_system: &str) -> Result<Arc<dyn PushEventAdapter>, 
     }
 }
 
-fn load_default_endpoint_configs_from_env() -> Vec<AdapterEndpointConfig> {
+pub fn load_default_endpoint_configs_from_env() -> Vec<AdapterEndpointConfig> {
     vec![
         AdapterEndpointConfig {
             source_system: "jira".to_string(),
             base_url: std::env::var("ALM_JIRA_BASE_URL").ok(),
             bearer_token: std::env::var("ALM_JIRA_TOKEN").ok(),
+            push_signing_secret: std::env::var("ALM_JIRA_WEBHOOK_SECRET")
+                .ok()
+                .or_else(|| std::env::var("ALM_JIRA_TOKEN").ok()),
             enable_pull: true,
             enable_push: true,
         },
@@ -254,6 +258,9 @@ fn load_default_endpoint_configs_from_env() -> Vec<AdapterEndpointConfig> {
             source_system: "bitbucket".to_string(),
             base_url: std::env::var("ALM_BITBUCKET_BASE_URL").ok(),
             bearer_token: std::env::var("ALM_BITBUCKET_TOKEN").ok(),
+            push_signing_secret: std::env::var("ALM_BITBUCKET_WEBHOOK_SECRET")
+                .ok()
+                .or_else(|| std::env::var("ALM_BITBUCKET_TOKEN").ok()),
             enable_pull: true,
             enable_push: true,
         },
@@ -261,6 +268,9 @@ fn load_default_endpoint_configs_from_env() -> Vec<AdapterEndpointConfig> {
             source_system: "bamboo".to_string(),
             base_url: std::env::var("ALM_BAMBOO_BASE_URL").ok(),
             bearer_token: std::env::var("ALM_BAMBOO_TOKEN").ok(),
+            push_signing_secret: std::env::var("ALM_BAMBOO_WEBHOOK_SECRET")
+                .ok()
+                .or_else(|| std::env::var("ALM_BAMBOO_TOKEN").ok()),
             enable_pull: true,
             enable_push: true,
         },
@@ -268,6 +278,9 @@ fn load_default_endpoint_configs_from_env() -> Vec<AdapterEndpointConfig> {
             source_system: "confluence".to_string(),
             base_url: std::env::var("ALM_CONFLUENCE_BASE_URL").ok(),
             bearer_token: std::env::var("ALM_CONFLUENCE_TOKEN").ok(),
+            push_signing_secret: std::env::var("ALM_CONFLUENCE_WEBHOOK_SECRET")
+                .ok()
+                .or_else(|| std::env::var("ALM_CONFLUENCE_TOKEN").ok()),
             enable_pull: true,
             enable_push: true,
         },
@@ -329,6 +342,7 @@ mod tests {
                 source_system: "jira".to_string(),
                 base_url: Some("https://jira.example.com".to_string()),
                 bearer_token: Some("jira-token".to_string()),
+                push_signing_secret: Some("jira-signing-secret".to_string()),
                 enable_pull: true,
                 enable_push: true,
             },
@@ -336,6 +350,7 @@ mod tests {
                 source_system: "bamboo".to_string(),
                 base_url: Some("https://bamboo.example.com".to_string()),
                 bearer_token: None,
+                push_signing_secret: None,
                 enable_pull: true,
                 enable_push: false,
             },
@@ -357,6 +372,7 @@ mod tests {
             source_system: "gitlab".to_string(),
             base_url: Some("https://gitlab.example.com".to_string()),
             bearer_token: Some("gitlab-token".to_string()),
+            push_signing_secret: Some("gitlab-signing-secret".to_string()),
             enable_pull: true,
             enable_push: true,
         }];

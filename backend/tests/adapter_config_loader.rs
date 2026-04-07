@@ -1,11 +1,27 @@
 use std::str::FromStr;
 
+use std::sync::Arc;
+
+use backend::adapters::{HttpTransport, build_registry_from_endpoint_configs};
 use backend::adapters::config_loader::DbAdapterConfigLoader;
 use backend::config::Settings;
 use backend::db::pool::{connect, run_migrations};
+use backend::security::secrets::EnvSecretCipher;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::{ConnectOptions, PgPool};
 use uuid::Uuid;
+
+struct NullTransport;
+
+#[async_trait::async_trait]
+impl HttpTransport for NullTransport {
+    async fn get_json(
+        &self,
+        _request: backend::adapters::AdapterHttpRequest,
+    ) -> Result<serde_json::Value, backend::adapters::AdapterError> {
+        Ok(serde_json::json!({}))
+    }
+}
 
 #[tokio::test]
 async fn loader_returns_endpoint_configs_from_database() -> anyhow::Result<()> {
@@ -28,7 +44,11 @@ async fn loader_returns_endpoint_configs_from_database() -> anyhow::Result<()> {
         configs[0].base_url.as_deref(),
         Some("https://jira.example.com")
     );
-    assert_eq!(configs[0].bearer_token.as_deref(), Some("encrypted-token"));
+    assert_eq!(configs[0].bearer_token.as_deref(), Some("jira-live-token"));
+    assert_eq!(
+        configs[0].push_signing_secret.as_deref(),
+        Some("jira-live-token")
+    );
     assert!(configs[0].enable_pull);
     assert!(configs[0].enable_push);
 
@@ -48,9 +68,8 @@ async fn loader_builds_registry_from_database_configs() -> anyhow::Result<()> {
     seed_endpoint_config(&pool).await?;
 
     let loader = DbAdapterConfigLoader::new(pool);
-    let registry = loader
-        .load_registry()
-        .await?
+    let endpoint_configs = loader.load_endpoint_configs().await?;
+    let registry = build_registry_from_endpoint_configs(&endpoint_configs, Arc::new(NullTransport))
         .expect("registry should be created from DB configs");
 
     assert!(registry.get_pull_adapter("jira").is_some());
@@ -60,9 +79,17 @@ async fn loader_builds_registry_from_database_configs() -> anyhow::Result<()> {
 }
 
 async fn seed_endpoint_config(pool: &PgPool) -> anyhow::Result<()> {
+    unsafe {
+        std::env::set_var(
+            "ALM_BACKEND_SECRET_KEY_K1",
+            "adapter-config-loader-test-key-material",
+        );
+    }
     let system_id = Uuid::new_v4();
     let endpoint_id = Uuid::new_v4();
     let credential_id = Uuid::new_v4();
+    let secret_cipher = EnvSecretCipher::new();
+    let encrypted_secret = secret_cipher.encrypt("jira-live-token", Some("k1"))?;
 
     sqlx::query(
         r#"
@@ -124,7 +151,7 @@ async fn seed_endpoint_config(pool: &PgPool) -> anyhow::Result<()> {
           created_at,
           updated_at
         ) values (
-          $1, $2, $3, 'token', 'jira-bot', 'encrypted-token', 'k1', 'fp-1',
+          $1, $2, $3, 'token', 'jira-bot', $4, 'k1', 'fp-1',
           'active', now(), null, now(), 'tester', now(), now()
         )
         "#,
@@ -132,6 +159,7 @@ async fn seed_endpoint_config(pool: &PgPool) -> anyhow::Result<()> {
     .bind(credential_id)
     .bind(system_id)
     .bind(endpoint_id)
+    .bind(encrypted_secret)
     .execute(pool)
     .await?;
 

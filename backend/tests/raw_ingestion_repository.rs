@@ -125,6 +125,95 @@ async fn repository_rejects_invalid_timestamp() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[tokio::test]
+async fn repository_marks_late_arrival_event_as_stale() -> anyhow::Result<()> {
+    let Some(test_db) = TestDatabase::create().await? else {
+        eprintln!(
+            "skip repository_marks_late_arrival_event_as_stale: ALM_BACKEND_TEST_DATABASE_ADMIN_URL not set"
+        );
+        return Ok(());
+    };
+
+    let pool = connect_and_migrate(&test_db).await?;
+    let repository = RawIngestionRepository::new(pool.clone());
+
+    repository
+        .create(CreateRawIngestionEventInput {
+            source_system: "jira".to_string(),
+            source_object_type: "issue".to_string(),
+            source_object_id: "ALM-123".to_string(),
+            source_event_key: "jira-event-9000".to_string(),
+            source_version: Some("43".to_string()),
+            source_updated_at: Some("2026-04-07T09:15:00Z".to_string()),
+            payload: serde_json::json!({"summary": "Newest state"}),
+        })
+        .await?;
+
+    repository
+        .create(CreateRawIngestionEventInput {
+            source_system: "jira".to_string(),
+            source_object_type: "issue".to_string(),
+            source_object_id: "ALM-123".to_string(),
+            source_event_key: "jira-event-8891".to_string(),
+            source_version: Some("42".to_string()),
+            source_updated_at: Some("2026-04-07T08:15:00Z".to_string()),
+            payload: serde_json::json!({"summary": "Older state"}),
+        })
+        .await?;
+
+    let normalization_status: String = sqlx::query_scalar(
+        "select normalization_status from raw_ingestion_event where source_event_key = $1",
+    )
+    .bind("jira-event-8891")
+    .fetch_one(&pool)
+    .await?;
+
+    assert_eq!(normalization_status, "stale");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn repository_marks_missing_reference_event_as_pending_reference() -> anyhow::Result<()> {
+    let Some(test_db) = TestDatabase::create().await? else {
+        eprintln!(
+            "skip repository_marks_missing_reference_event_as_pending_reference: ALM_BACKEND_TEST_DATABASE_ADMIN_URL not set"
+        );
+        return Ok(());
+    };
+
+    let pool = connect_and_migrate(&test_db).await?;
+    let repository = RawIngestionRepository::new(pool.clone());
+
+    repository
+        .create(CreateRawIngestionEventInput {
+            source_system: "jira".to_string(),
+            source_object_type: "issue".to_string(),
+            source_object_id: "ALM-999".to_string(),
+            source_event_key: "jira-event-9999".to_string(),
+            source_version: Some("7".to_string()),
+            source_updated_at: Some("2026-04-07T11:15:00Z".to_string()),
+            payload: serde_json::json!({
+                "summary": "Child task before parent",
+                "references": {
+                    "missing": ["project:OPS"]
+                }
+            }),
+        })
+        .await?;
+
+    let normalization_status: String = sqlx::query_scalar(
+        "select normalization_status from raw_ingestion_event where source_event_key = $1",
+    )
+    .bind("jira-event-9999")
+    .fetch_one(&pool)
+    .await?;
+
+    assert_eq!(normalization_status, "pending_reference");
+
+    Ok(())
+}
+
 async fn connect_and_migrate(test_db: &TestDatabase) -> anyhow::Result<PgPool> {
     let settings = Settings {
         bind_address: "127.0.0.1:8080".to_string(),
