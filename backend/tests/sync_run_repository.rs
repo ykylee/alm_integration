@@ -3,7 +3,8 @@ use std::str::FromStr;
 use backend::config::Settings;
 use backend::db::pool::{connect, run_migrations};
 use backend::services::sync_runs::{
-    CancelSyncRunInput, CreateSyncRunInput, SyncRunRepository, SyncRunRepositoryError,
+    CancelSyncRunInput, CreateSyncRunInput, SyncRunListFilter, SyncRunRepository,
+    SyncRunRepositoryError,
 };
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::{ConnectOptions, PgPool};
@@ -157,6 +158,56 @@ async fn repository_rejects_retry_for_non_retriable_run() -> anyhow::Result<()> 
     let result = repository.retry(&created.run_id, None).await;
 
     assert!(matches!(result, Err(SyncRunRepositoryError::NotRetriable)));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn repository_lists_runs_with_source_system_and_status_filters() -> anyhow::Result<()> {
+    let Some(test_db) = TestDatabase::create().await? else {
+        eprintln!(
+            "skip repository_lists_runs_with_source_system_and_status_filters: ALM_BACKEND_TEST_DATABASE_ADMIN_URL not set"
+        );
+        return Ok(());
+    };
+
+    let pool = connect_and_migrate(&test_db).await?;
+    let repository = SyncRunRepository::new(pool.clone());
+
+    let jira_run = repository
+        .create(CreateSyncRunInput {
+            source_system: "jira".to_string(),
+            mode: "incremental".to_string(),
+            scope: serde_json::json!({"project_keys": ["ALM"]}),
+            reason: None,
+        })
+        .await?;
+
+    let bitbucket_run = repository
+        .create(CreateSyncRunInput {
+            source_system: "bitbucket".to_string(),
+            mode: "incremental".to_string(),
+            scope: serde_json::json!({"project_keys": ["OPS"]}),
+            reason: None,
+        })
+        .await?;
+
+    sqlx::query("update integration_run set run_status = 'running' where external_run_id = $1")
+        .bind(&bitbucket_run.run_id)
+        .execute(&pool)
+        .await?;
+
+    let items = repository
+        .list(&SyncRunListFilter {
+            source_system: Some("bitbucket".to_string()),
+            run_status: Some("running".to_string()),
+            ..SyncRunListFilter::default()
+        })
+        .await?;
+
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0].run_id, bitbucket_run.run_id);
+    assert_ne!(items[0].run_id, jira_run.run_id);
 
     Ok(())
 }

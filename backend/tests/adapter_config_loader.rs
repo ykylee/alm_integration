@@ -2,8 +2,8 @@ use std::str::FromStr;
 
 use std::sync::Arc;
 
-use backend::adapters::{HttpTransport, build_registry_from_endpoint_configs};
 use backend::adapters::config_loader::DbAdapterConfigLoader;
+use backend::adapters::{HttpTransport, build_registry_from_endpoint_configs};
 use backend::config::Settings;
 use backend::db::pool::{connect, run_migrations};
 use backend::security::secrets::EnvSecretCipher;

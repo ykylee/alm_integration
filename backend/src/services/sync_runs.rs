@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use serde::Deserialize;
 use serde::Serialize;
 use sqlx::PgPool;
 use sqlx::types::Json;
@@ -35,6 +36,17 @@ pub struct CreateSyncRunInput {
     pub reason: Option<String>,
 }
 
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct SyncRunListFilter {
+    pub source_system: Option<String>,
+    #[serde(rename = "status")]
+    pub run_status: Option<String>,
+    pub started_from: Option<String>,
+    pub started_to: Option<String>,
+    pub cancel_requested_from: Option<String>,
+    pub cancel_requested_to: Option<String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct CancelSyncRunInput {
     pub requested_by: String,
@@ -62,6 +74,7 @@ pub enum SyncRunRepositoryError {
     NotFound,
     NotRetriable,
     NotCancellable,
+    InvalidFilterTimestamp(String),
     Database(sqlx::Error),
 }
 
@@ -71,6 +84,9 @@ impl Display for SyncRunRepositoryError {
             Self::NotFound => write!(f, "sync run not found"),
             Self::NotRetriable => write!(f, "sync run is not retriable"),
             Self::NotCancellable => write!(f, "sync run is not cancellable"),
+            Self::InvalidFilterTimestamp(value) => {
+                write!(f, "invalid sync run filter timestamp: {value}")
+            }
             Self::Database(error) => write!(f, "database error: {error}"),
         }
     }
@@ -115,8 +131,12 @@ impl SyncRunStore {
         record
     }
 
-    pub fn list(&self) -> Vec<SyncRunRecord> {
-        self.runs.clone()
+    pub fn list(&self, filter: &SyncRunListFilter) -> Vec<SyncRunRecord> {
+        self.runs
+            .iter()
+            .filter(|run| matches_filter(run, filter))
+            .cloned()
+            .collect()
     }
 
     pub fn get(&self, run_id: &str) -> Option<SyncRunRecord> {
@@ -273,7 +293,10 @@ impl SyncRunRepository {
             .ok_or(SyncRunRepositoryError::NotFound)
     }
 
-    pub async fn list(&self) -> Result<Vec<SyncRunRecord>, SyncRunRepositoryError> {
+    pub async fn list(
+        &self,
+        filter: &SyncRunListFilter,
+    ) -> Result<Vec<SyncRunRecord>, SyncRunRepositoryError> {
         let rows = sqlx::query_as::<_, SyncRunRow>(
             r#"
             select
@@ -300,9 +323,29 @@ impl SyncRunRepository {
                 where original.integration_run_id = integration_run.retry_of_run_id
               ) as retry_of_external_run_id
             from integration_run
+            where ($1::varchar is null or source_system = $1)
+              and ($2::varchar is null or run_status = $2)
+              and ($3::timestamptz is null or started_at >= $3)
+              and ($4::timestamptz is null or started_at <= $4)
+              and ($5::timestamptz is null or cancel_requested_at >= $5)
+              and ($6::timestamptz is null or cancel_requested_at <= $6)
             order by queued_at desc
             "#,
         )
+        .bind(filter.source_system.as_deref())
+        .bind(filter.run_status.as_deref())
+        .bind(parse_optional_filter_timestamp(
+            filter.started_from.as_deref(),
+        )?)
+        .bind(parse_optional_filter_timestamp(
+            filter.started_to.as_deref(),
+        )?)
+        .bind(parse_optional_filter_timestamp(
+            filter.cancel_requested_from.as_deref(),
+        )?)
+        .bind(parse_optional_filter_timestamp(
+            filter.cancel_requested_to.as_deref(),
+        )?)
         .fetch_all(&self.pool)
         .await?;
 
@@ -637,9 +680,89 @@ fn now() -> DateTime<Utc> {
     Utc::now()
 }
 
+fn matches_filter(run: &SyncRunRecord, filter: &SyncRunListFilter) -> bool {
+    if let Some(source_system) = filter.source_system.as_deref() {
+        if run.source_system != source_system {
+            return false;
+        }
+    }
+
+    if let Some(run_status) = filter.run_status.as_deref() {
+        if run.run_status != run_status {
+            return false;
+        }
+    }
+
+    if !matches_optional_range(
+        run.started_at.as_deref(),
+        filter.started_from.as_deref(),
+        true,
+    ) {
+        return false;
+    }
+    if !matches_optional_range(
+        run.started_at.as_deref(),
+        filter.started_to.as_deref(),
+        false,
+    ) {
+        return false;
+    }
+    if !matches_optional_range(
+        run.cancel_requested_at.as_deref(),
+        filter.cancel_requested_from.as_deref(),
+        true,
+    ) {
+        return false;
+    }
+    if !matches_optional_range(
+        run.cancel_requested_at.as_deref(),
+        filter.cancel_requested_to.as_deref(),
+        false,
+    ) {
+        return false;
+    }
+
+    true
+}
+
+fn matches_optional_range(value: Option<&str>, boundary: Option<&str>, lower_bound: bool) -> bool {
+    let Some(boundary) = boundary else {
+        return true;
+    };
+    let Some(value) = value else {
+        return false;
+    };
+    let Ok(value) = DateTime::parse_from_rfc3339(value) else {
+        return false;
+    };
+    let Ok(boundary) = DateTime::parse_from_rfc3339(boundary) else {
+        return false;
+    };
+
+    if lower_bound {
+        value >= boundary
+    } else {
+        value <= boundary
+    }
+}
+
+fn parse_optional_filter_timestamp(
+    value: Option<&str>,
+) -> Result<Option<DateTime<Utc>>, SyncRunRepositoryError> {
+    value
+        .map(|raw| {
+            DateTime::parse_from_rfc3339(raw)
+                .map(|parsed| parsed.with_timezone(&Utc))
+                .map_err(|_| SyncRunRepositoryError::InvalidFilterTimestamp(raw.to_string()))
+        })
+        .transpose()
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{CancelSyncRunInput, CreateSyncRunInput, SyncRunStore, SyncRunStoreError};
+    use super::{
+        CancelSyncRunInput, CreateSyncRunInput, SyncRunListFilter, SyncRunStore, SyncRunStoreError,
+    };
 
     fn create_input() -> CreateSyncRunInput {
         CreateSyncRunInput {
@@ -660,7 +783,7 @@ mod tests {
         assert_eq!(record.status_reason_code, "manual_run_requested");
         assert!(record.started_at.is_none());
         assert!(record.cancel_requested_at.is_none());
-        assert_eq!(store.list().len(), 1);
+        assert_eq!(store.list(&SyncRunListFilter::default()).len(), 1);
     }
 
     #[test]
@@ -689,7 +812,7 @@ mod tests {
             retry.retry_of_run_id.as_deref(),
             Some(record.run_id.as_str())
         );
-        assert_eq!(store.list().len(), 2);
+        assert_eq!(store.list(&SyncRunListFilter::default()).len(), 2);
     }
 
     #[test]
@@ -746,5 +869,25 @@ mod tests {
             "run already finished; cancellation not applied"
         );
         assert_eq!(result.record.run_status, "completed");
+    }
+
+    #[test]
+    fn list_filters_runs_by_source_system_and_status() {
+        let mut store = SyncRunStore::default();
+        let first = store.create(create_input());
+        let mut second = create_input();
+        second.source_system = "bitbucket".to_string();
+        let second = store.create(second);
+        store.runs[1].run_status = "running".to_string();
+
+        let items = store.list(&SyncRunListFilter {
+            source_system: Some("bitbucket".to_string()),
+            run_status: Some("running".to_string()),
+            ..SyncRunListFilter::default()
+        });
+
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].run_id, second.run_id);
+        assert_ne!(items[0].run_id, first.run_id);
     }
 }

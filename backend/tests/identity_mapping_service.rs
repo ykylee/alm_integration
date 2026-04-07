@@ -2,90 +2,80 @@ use std::str::FromStr;
 
 use backend::config::Settings;
 use backend::db::pool::{connect, run_migrations};
+use backend::services::identity_mapping::{IdentityMappingService, UpsertIdentityMappingInput};
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::{ConnectOptions, PgPool, Row};
 use uuid::Uuid;
 
 #[tokio::test]
-async fn applies_migrations_to_empty_postgres_database() -> anyhow::Result<()> {
+async fn identity_mapping_service_creates_and_updates_mapping() -> anyhow::Result<()> {
     let Some(test_db) = TestDatabase::create().await? else {
         eprintln!(
-            "skip applies_migrations_to_empty_postgres_database: ALM_BACKEND_TEST_DATABASE_ADMIN_URL not set"
+            "skip identity_mapping_service_creates_and_updates_mapping: ALM_BACKEND_TEST_DATABASE_ADMIN_URL not set"
         );
         return Ok(());
     };
 
+    let pool = connect_and_migrate(&test_db).await?;
+    let service = IdentityMappingService::new(pool.clone());
+    let internal_entity_id = Uuid::new_v4();
+
+    service
+        .upsert(UpsertIdentityMappingInput {
+            source_system_code: "jira".to_string(),
+            source_identity_key: "issue:ALM-123".to_string(),
+            internal_entity_type: "work_item".to_string(),
+            internal_entity_id,
+            mapping_status: "active".to_string(),
+            verified_at: None,
+        })
+        .await?;
+
+    service
+        .upsert(UpsertIdentityMappingInput {
+            source_system_code: "jira".to_string(),
+            source_identity_key: "issue:ALM-123".to_string(),
+            internal_entity_type: "work_item".to_string(),
+            internal_entity_id,
+            mapping_status: "verified".to_string(),
+            verified_at: Some("2026-04-07T12:00:00Z".to_string()),
+        })
+        .await?;
+
+    let row = sqlx::query(
+        r#"
+        select mapping_status, verified_at
+        from identity_mapping
+        where source_system_code = $1
+          and source_identity_key = $2
+          and internal_entity_type = $3
+        "#,
+    )
+    .bind("jira")
+    .bind("issue:ALM-123")
+    .bind("work_item")
+    .fetch_one(&pool)
+    .await?;
+
+    let mapping_status: String = row.get("mapping_status");
+    let verified_at: chrono::DateTime<chrono::Utc> = row.get("verified_at");
+
+    assert_eq!(mapping_status, "verified");
+    assert_eq!(verified_at.to_rfc3339(), "2026-04-07T12:00:00+00:00");
+
+    Ok(())
+}
+
+async fn connect_and_migrate(test_db: &TestDatabase) -> anyhow::Result<PgPool> {
     let settings = Settings {
         bind_address: "127.0.0.1:8080".to_string(),
         database_url: test_db.database_url(),
         database_max_connections: 5,
         auto_apply_migrations: true,
     };
-
     let pool = connect(&settings).await?;
     run_migrations(&pool).await?;
-
-    let tables: Vec<String> = sqlx::query_scalar(
-        r#"
-        select table_name
-        from information_schema.tables
-        where table_schema = 'public'
-          and table_name in (
-            'integration_job',
-            'integration_run',
-            'raw_ingestion_event',
-            'organization_master',
-            'project',
-            'work_item',
-            'work_item_type'
-          )
-        order by table_name
-        "#,
-    )
-    .fetch_all(&pool)
-    .await?;
-
-    assert_eq!(
-        tables,
-        vec![
-            "integration_job".to_string(),
-            "integration_run".to_string(),
-            "organization_master".to_string(),
-            "project".to_string(),
-            "raw_ingestion_event".to_string(),
-            "work_item".to_string(),
-            "work_item_type".to_string()
-        ]
-    );
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn bootstrap_connects_to_created_postgres_database() -> anyhow::Result<()> {
-    let Some(test_db) = TestDatabase::create().await? else {
-        eprintln!(
-            "skip bootstrap_connects_to_created_postgres_database: ALM_BACKEND_TEST_DATABASE_ADMIN_URL not set"
-        );
-        return Ok(());
-    };
-
-    let settings = Settings {
-        bind_address: "127.0.0.1:8080".to_string(),
-        database_url: test_db.database_url(),
-        database_max_connections: 3,
-        auto_apply_migrations: false,
-    };
-
-    let pool = connect(&settings).await?;
-    let current_database: String = sqlx::query("select current_database()")
-        .fetch_one(&pool)
-        .await?
-        .get(0);
-
-    assert_eq!(current_database, test_db.database_name);
-
-    Ok(())
+    Ok(pool)
 }
 
 struct TestDatabase {

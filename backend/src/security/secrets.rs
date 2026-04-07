@@ -67,10 +67,7 @@ impl EnvSecretCipher {
             .map_err(|_| SecretCipherError::InvalidCiphertext("invalid derived key".to_string()))
     }
 
-    fn resolve_key_material(
-        &self,
-        key_version: Option<&str>,
-    ) -> Result<String, SecretCipherError> {
+    fn resolve_key_material(&self, key_version: Option<&str>) -> Result<String, SecretCipherError> {
         if let Some(version) = key_version {
             let env_name = format!("ALM_BACKEND_SECRET_KEY_{}", sanitize_key_version(version));
             if let Ok(value) = std::env::var(&env_name) {
@@ -143,13 +140,9 @@ mod tests {
             std::env::set_var("ALM_BACKEND_SECRET_KEY_K1", "test-key-material");
         }
         let cipher = EnvSecretCipher::new();
-        let encrypted = cipher
-            .encrypt("jira-secret", Some("k1"))
-            .expect("encrypts");
+        let encrypted = cipher.encrypt("jira-secret", Some("k1")).expect("encrypts");
 
-        let decrypted = cipher
-            .decrypt(&encrypted, Some("k1"))
-            .expect("decrypts");
+        let decrypted = cipher.decrypt(&encrypted, Some("k1")).expect("decrypts");
 
         assert_eq!(decrypted, "jira-secret");
     }
@@ -159,7 +152,9 @@ mod tests {
         let cipher = EnvSecretCipher::new();
 
         assert_eq!(
-            cipher.decrypt("legacy-token", Some("k1")).expect("decrypts"),
+            cipher
+                .decrypt("legacy-token", Some("k1"))
+                .expect("decrypts"),
             "legacy-token"
         );
         assert_eq!(

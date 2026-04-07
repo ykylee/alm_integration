@@ -54,9 +54,15 @@ async fn orchestrator_creates_sync_run_and_raw_events() -> anyhow::Result<()> {
 
     let counts = sqlx::query(
         r#"
-        select ir.processed_count, ir.success_count, count(rie.raw_ingestion_event_id) as raw_count
+        select
+          ir.processed_count,
+          ir.success_count,
+          count(distinct rie.raw_ingestion_event_id) as raw_count,
+          count(distinct nrr.normalized_record_reference_id) as normalized_count
         from integration_run ir
         left join raw_ingestion_event rie on rie.integration_run_id = ir.integration_run_id
+        left join normalized_record_reference nrr
+          on nrr.raw_ingestion_event_id = rie.raw_ingestion_event_id
         where ir.external_run_id = $1
         group by ir.processed_count, ir.success_count
         "#,
@@ -68,10 +74,27 @@ async fn orchestrator_creates_sync_run_and_raw_events() -> anyhow::Result<()> {
     let processed_count: i32 = counts.get(0);
     let success_count: i32 = counts.get(1);
     let raw_count: i64 = counts.get(2);
+    let normalized_count: i64 = counts.get(3);
 
     assert_eq!(processed_count, 2);
     assert_eq!(success_count, 2);
     assert_eq!(raw_count, 2);
+    assert_eq!(normalized_count, 2);
+
+    let normalized_status_count: i64 = sqlx::query_scalar(
+        r#"
+        select count(*)
+        from raw_ingestion_event rie
+        join integration_run ir on ir.integration_run_id = rie.integration_run_id
+        where ir.external_run_id = $1
+          and rie.normalization_status = 'normalized'
+        "#,
+    )
+    .bind(&result.run_id)
+    .fetch_one(&pool)
+    .await?;
+
+    assert_eq!(normalized_status_count, 2);
 
     Ok(())
 }
@@ -120,6 +143,113 @@ async fn orchestrator_marks_partial_completion_when_record_fails() -> anyhow::Re
     assert_eq!(result.processed_count, 2);
     assert_eq!(result.success_count, 1);
     assert_eq!(result.failure_count, 1);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn orchestrator_resolves_pending_reference_within_same_run() -> anyhow::Result<()> {
+    let Some(test_db) = TestDatabase::create().await? else {
+        eprintln!(
+            "skip orchestrator_resolves_pending_reference_within_same_run: ALM_BACKEND_TEST_DATABASE_ADMIN_URL not set"
+        );
+        return Ok(());
+    };
+
+    let pool = connect_and_migrate(&test_db).await?;
+    let orchestrator = PullSyncOrchestrator::new(pool.clone());
+
+    let result = orchestrator
+        .run(PullSyncRunInput {
+            source_system: "jira".to_string(),
+            mode: "incremental".to_string(),
+            scope: serde_json::json!({"project_keys": ["OPS"]}),
+            reason: Some("reference resolution".to_string()),
+            records: vec![
+                PullRecordInput {
+                    source_object_type: "project".to_string(),
+                    source_object_id: "OPS".to_string(),
+                    source_event_key: "jira-project-ops".to_string(),
+                    source_version: Some("1".to_string()),
+                    source_updated_at: Some("2026-04-07T09:00:00Z".to_string()),
+                    payload: serde_json::json!({"name": "Operations"}),
+                },
+                PullRecordInput {
+                    source_object_type: "issue".to_string(),
+                    source_object_id: "OPS-101".to_string(),
+                    source_event_key: "jira-issue-ops-101".to_string(),
+                    source_version: Some("2".to_string()),
+                    source_updated_at: Some("2026-04-07T09:05:00Z".to_string()),
+                    payload: serde_json::json!({
+                        "summary": "Child task after parent",
+                        "references": {
+                            "missing": ["project:OPS"]
+                        }
+                    }),
+                },
+            ],
+        })
+        .await?;
+
+    assert_eq!(result.run_status, "completed");
+    assert_eq!(result.success_count, 2);
+
+    let statuses = sqlx::query(
+        r#"
+        select source_object_id, normalization_status
+        from raw_ingestion_event rie
+        join integration_run ir on ir.integration_run_id = rie.integration_run_id
+        where ir.external_run_id = $1
+        order by source_object_id
+        "#,
+    )
+    .bind(&result.run_id)
+    .fetch_all(&pool)
+    .await?;
+
+    let normalized_statuses: Vec<(String, String)> = statuses
+        .into_iter()
+        .map(|row| (row.get("source_object_id"), row.get("normalization_status")))
+        .collect();
+
+    assert_eq!(
+        normalized_statuses,
+        vec![
+            ("OPS".to_string(), "normalized".to_string()),
+            ("OPS-101".to_string(), "normalized".to_string()),
+        ]
+    );
+
+    let normalized_count: i64 = sqlx::query_scalar(
+        r#"
+        select count(*)
+        from normalized_record_reference nrr
+        join raw_ingestion_event rie on rie.raw_ingestion_event_id = nrr.raw_ingestion_event_id
+        join integration_run ir on ir.integration_run_id = rie.integration_run_id
+        where ir.external_run_id = $1
+        "#,
+    )
+    .bind(&result.run_id)
+    .fetch_one(&pool)
+    .await?;
+
+    assert_eq!(normalized_count, 2);
+
+    let domain_counts = sqlx::query(
+        r#"
+        select
+          (select count(*) from project where project_code = 'OPS') as project_count,
+          (select count(*) from work_item where work_item_key = 'OPS-101') as work_item_count
+        "#,
+    )
+    .fetch_one(&pool)
+    .await?;
+
+    let project_count: i64 = domain_counts.get("project_count");
+    let work_item_count: i64 = domain_counts.get("work_item_count");
+
+    assert_eq!(project_count, 1);
+    assert_eq!(work_item_count, 1);
 
     Ok(())
 }

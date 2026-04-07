@@ -12,6 +12,18 @@ fn integration_runtime_migration_files_exist() {
         include_str!("../migrations/20260407120000_create_integration_connection_tables.up.sql");
     let connection_down_sql =
         include_str!("../migrations/20260407120000_create_integration_connection_tables.down.sql");
+    let normalization_up_sql =
+        include_str!("../migrations/20260407234000_add_normalized_record_reference.up.sql");
+    let normalization_down_sql =
+        include_str!("../migrations/20260407234000_add_normalized_record_reference.down.sql");
+    let identity_mapping_up_sql =
+        include_str!("../migrations/20260408001000_add_identity_mapping.up.sql");
+    let identity_mapping_down_sql =
+        include_str!("../migrations/20260408001000_add_identity_mapping.down.sql");
+    let domain_core_up_sql =
+        include_str!("../migrations/20260408013000_add_domain_core_tables.up.sql");
+    let domain_core_down_sql =
+        include_str!("../migrations/20260408013000_add_domain_core_tables.down.sql");
 
     assert!(up_sql.contains("create table integration_job"));
     assert!(up_sql.contains("create table integration_run"));
@@ -30,4 +42,14 @@ fn integration_runtime_migration_files_exist() {
     assert!(connection_up_sql.contains("create table integration_endpoint"));
     assert!(connection_up_sql.contains("create table integration_credential"));
     assert!(connection_down_sql.contains("drop table if exists integration_credential"));
+    assert!(normalization_up_sql.contains("create table normalized_record_reference"));
+    assert!(normalization_up_sql.contains("constraint fk_normalized_record_reference_raw"));
+    assert!(normalization_down_sql.contains("drop table if exists normalized_record_reference"));
+    assert!(identity_mapping_up_sql.contains("create table identity_mapping"));
+    assert!(identity_mapping_up_sql.contains("constraint ux_identity_mapping_source"));
+    assert!(identity_mapping_down_sql.contains("drop table if exists identity_mapping"));
+    assert!(domain_core_up_sql.contains("create table project"));
+    assert!(domain_core_up_sql.contains("create table work_item"));
+    assert!(domain_core_up_sql.contains("insert into work_item_type"));
+    assert!(domain_core_down_sql.contains("drop table if exists work_item"));
 }

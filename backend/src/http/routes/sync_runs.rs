@@ -1,6 +1,6 @@
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
     routing::{get, post},
 };
@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::app_state::AppState;
 use crate::services::sync_runs::{
-    CancelSyncRunInput, CreateSyncRunInput, SyncRunRecord, SyncRunRepository,
+    CancelSyncRunInput, CreateSyncRunInput, SyncRunListFilter, SyncRunRecord, SyncRunRepository,
     SyncRunRepositoryError, SyncRunStoreError,
 };
 
@@ -98,17 +98,20 @@ async fn create_sync_run(
     )
 }
 
-async fn list_sync_runs(State(state): State<AppState>) -> Json<SyncRunListResponse> {
+async fn list_sync_runs(
+    State(state): State<AppState>,
+    Query(filter): Query<SyncRunListFilter>,
+) -> Result<Json<SyncRunListResponse>, (StatusCode, &'static str)> {
     let items = if let Some(pool) = state.db_pool.clone() {
         SyncRunRepository::new(pool)
-            .list()
+            .list(&filter)
             .await
-            .expect("sync run listing should succeed")
+            .map_err(map_repository_error)?
     } else {
         let store = state.sync_run_store.read().await;
-        store.list()
+        store.list(&filter)
     };
-    Json(SyncRunListResponse { items })
+    Ok(Json(SyncRunListResponse { items }))
 }
 
 async fn get_sync_run(
@@ -221,6 +224,9 @@ fn map_repository_error(error: SyncRunRepositoryError) -> (StatusCode, &'static 
         SyncRunRepositoryError::NotFound => (StatusCode::NOT_FOUND, "RESOURCE_NOT_FOUND"),
         SyncRunRepositoryError::NotRetriable => (StatusCode::CONFLICT, "RUN_NOT_RETRIABLE"),
         SyncRunRepositoryError::NotCancellable => (StatusCode::CONFLICT, "RUN_NOT_CANCELLABLE"),
+        SyncRunRepositoryError::InvalidFilterTimestamp(_) => {
+            (StatusCode::BAD_REQUEST, "INVALID_FILTER_TIMESTAMP")
+        }
         SyncRunRepositoryError::Database(_) => {
             (StatusCode::INTERNAL_SERVER_ERROR, "DATABASE_ERROR")
         }

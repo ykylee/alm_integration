@@ -15,7 +15,7 @@ use backend::http::router::build_router;
 use backend::services::pull_sync::{PullRecordInput, PullSyncOrchestrator, PullSyncRequestInput};
 use backend::services::raw_ingestion::CreateRawIngestionEventInput;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
-use sqlx::{ConnectOptions, PgPool};
+use sqlx::{ConnectOptions, PgPool, Row};
 use tower::ServiceExt;
 use uuid::Uuid;
 
@@ -124,6 +124,28 @@ async fn pull_orchestrator_uses_registered_pull_adapter() -> anyhow::Result<()> 
     assert_eq!(result.run_status, "completed");
     assert_eq!(result.success_count, 1);
     assert_eq!(result.failure_count, 0);
+
+    let counts = sqlx::query(
+        r#"
+        select
+          count(distinct rie.raw_ingestion_event_id) as raw_count,
+          count(distinct nrr.normalized_record_reference_id) as normalized_count
+        from integration_run ir
+        left join raw_ingestion_event rie on rie.integration_run_id = ir.integration_run_id
+        left join normalized_record_reference nrr
+          on nrr.raw_ingestion_event_id = rie.raw_ingestion_event_id
+        where ir.external_run_id = $1
+        "#,
+    )
+    .bind(&result.run_id)
+    .fetch_one(&pool)
+    .await?;
+
+    let raw_count: i64 = counts.get("raw_count");
+    let normalized_count: i64 = counts.get("normalized_count");
+
+    assert_eq!(raw_count, 1);
+    assert_eq!(normalized_count, 1);
 
     Ok(())
 }

@@ -266,6 +266,11 @@
 - 2026-04-07 `secret_ciphertext` 복호화 서비스와 `DbAdapterConfigLoader` 연계를 추가해 DB 자격증명을 adapter 및 `push` 서명 검증 secret 으로 주입할 수 있게 정리했다.
 - 2026-04-07 `RawIngestionRepository` 에 늦게 도착한 이벤트의 `stale`, 참조 미충족 payload 의 `pending_reference` 상태 판정 로직과 테스트를 추가했다.
 - 2026-04-07 `POST /api/v1/ingestion/events` 에 `HMAC-SHA256` 기반 서명 검증과 필수 헤더 검사를 추가했다.
+- 2026-04-07 `normalized_record_reference` 마이그레이션과 `NormalizationPipeline` 을 추가해 `pending` 원시 적재를 최소 표준 참조로 변환하고 `normalized` 상태 전이까지 구현했다.
+- 2026-04-07 `PullSyncOrchestrator` 가 같은 실행 범위의 `pending` 이벤트를 즉시 표준화하도록 연결했고, 오케스트레이터 통합 테스트에서 표준 참조 생성까지 검증했다.
+- 2026-04-07 `identity_mapping` 마이그레이션과 `IdentityMappingService` 를 추가해 표준화 결과와 함께 외부 식별자 `source_object_type:source_object_id` 를 내부 기준키에 매핑하도록 구현했다.
+- 2026-04-07 `ReferenceResolutionService` 를 추가해 `pending_reference` 이벤트를 `identity_mapping` 기준으로 재평가하고, 해소된 이벤트를 다시 `pending` 으로 승격한 뒤 같은 `pull` 실행 안에서 재표준화되도록 연결했다.
+- 2026-04-07 `organization_master`, `work_item_type`, `project`, `work_item` 최소 코어 테이블과 기본 시드를 추가했고, `ProjectWriteService`, `WorkItemWriteService` 를 통해 `pull` 실행 결과가 실제 도메인 테이블까지 반영되도록 연결했다.
 
 ## 5. 구현 착수 전 최종 게이트
 

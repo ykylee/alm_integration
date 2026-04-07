@@ -131,9 +131,7 @@ fn map_adapter_error(error: AdapterError) -> (StatusCode, &'static str) {
 
 fn map_ingestion_auth_error(error: IngestionAuthError) -> (StatusCode, &'static str) {
     match error {
-        IngestionAuthError::MissingHeader(_) => {
-            (StatusCode::UNAUTHORIZED, "MISSING_AUTH_HEADER")
-        }
+        IngestionAuthError::MissingHeader(_) => (StatusCode::UNAUTHORIZED, "MISSING_AUTH_HEADER"),
         IngestionAuthError::SourceSystemMismatch => {
             (StatusCode::FORBIDDEN, "SOURCE_SYSTEM_MISMATCH")
         }
@@ -143,8 +141,6 @@ fn map_ingestion_auth_error(error: IngestionAuthError) -> (StatusCode, &'static 
         IngestionAuthError::TimestampExpired => {
             (StatusCode::UNAUTHORIZED, "SIGNATURE_TIMESTAMP_EXPIRED")
         }
-        IngestionAuthError::InvalidSignature => {
-            (StatusCode::UNAUTHORIZED, "INVALID_SIGNATURE")
-        }
+        IngestionAuthError::InvalidSignature => (StatusCode::UNAUTHORIZED, "INVALID_SIGNATURE"),
     }
 }

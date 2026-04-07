@@ -49,6 +49,136 @@ async fn sync_run_can_be_created_and_cancelled() {
 }
 
 #[tokio::test]
+async fn sync_run_list_can_be_filtered_by_source_system_and_status() {
+    let app = build_router(AppState::new());
+
+    let jira_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/admin/sync-runs/")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"source_system":"jira","mode":"incremental","scope":{"project_keys":["ALM"]}}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(jira_response.status(), StatusCode::ACCEPTED);
+
+    let bitbucket_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/admin/sync-runs/")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"source_system":"bitbucket","mode":"incremental","scope":{"project_keys":["OPS"]}}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(bitbucket_response.status(), StatusCode::ACCEPTED);
+
+    let bitbucket_body = axum::body::to_bytes(bitbucket_response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let bitbucket_json: serde_json::Value = serde_json::from_slice(&bitbucket_body).unwrap();
+    let bitbucket_run_id = bitbucket_json["run_id"].as_str().unwrap();
+
+    let cancel_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri(&format!(
+                    "/api/v1/admin/sync-runs/{bitbucket_run_id}/cancel"
+                ))
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"reason":"stop","cancel_reason_code":"operator_manual_stop"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(cancel_response.status(), StatusCode::ACCEPTED);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/admin/sync-runs?source_system=bitbucket&status=queued")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let items = json["items"].as_array().unwrap();
+
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0]["source_system"], "bitbucket");
+    assert_eq!(items[0]["run_status"], "queued");
+}
+
+#[tokio::test]
+async fn sync_run_detail_returns_created_record() {
+    let app = build_router(AppState::new());
+
+    let create_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/admin/sync-runs/")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"source_system":"jira","mode":"incremental","scope":{"project_keys":["ALM"]},"reason":"manual detail check"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let create_body = axum::body::to_bytes(create_response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let create_json: serde_json::Value = serde_json::from_slice(&create_body).unwrap();
+    let run_id = create_json["run_id"].as_str().unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri(&format!("/api/v1/admin/sync-runs/{run_id}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+    assert_eq!(json["run_id"], run_id);
+    assert_eq!(json["source_system"], "jira");
+    assert_eq!(json["reason"], "manual detail check");
+}
+
+#[tokio::test]
 async fn ingestion_event_can_be_accepted() {
     let app = build_router(AppState::with_ingestion_auth(IngestionAuthRegistry::new()));
 

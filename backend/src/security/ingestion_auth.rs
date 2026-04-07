@@ -190,8 +190,13 @@ mod tests {
         );
         let body = Bytes::from_static(br#"{"source_system":"jira"}"#);
         let timestamp = "2026-04-07T12:00:00Z";
-        let signature =
-            sign_ingestion_payload("jira-webhook-secret", timestamp, "POST", "/api/v1/ingestion/events", &body);
+        let signature = sign_ingestion_payload(
+            "jira-webhook-secret",
+            timestamp,
+            "POST",
+            "/api/v1/ingestion/events",
+            &body,
+        );
         let mut headers = HeaderMap::new();
         headers.insert("x-source-system", HeaderValue::from_static("jira"));
         headers.insert(
