@@ -1343,6 +1343,7 @@ body[data-screen="data-workforce"] .data-command-grid {
 
 .data-action-panel {
   position: relative;
+  overflow: hidden;
 }
 
 .data-action-panel::before {
@@ -1354,14 +1355,81 @@ body[data-screen="data-workforce"] .data-command-grid {
   background: linear-gradient(180deg, rgba(27, 95, 191, 0.9), rgba(0, 122, 94, 0.7));
 }
 
+.data-focus-panel {
+  background:
+    linear-gradient(180deg, rgba(27, 95, 191, 0.05), rgba(255, 255, 255, 0.92)),
+    rgba(255, 255, 255, 0.9);
+}
+
+.data-selected-banner {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid rgba(27, 95, 191, 0.16);
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(180deg, rgba(230, 238, 255, 0.94), rgba(247, 250, 255, 0.96)),
+    rgba(255, 255, 255, 0.9);
+}
+
+.data-selected-banner p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .data-form-grid {
   grid-template-columns: 1fr;
   margin-bottom: 12px;
 }
 
+.data-action-lead {
+  margin: 0 0 14px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.data-form-grid .control-field {
+  padding: 12px 14px;
+  border: 1px solid rgba(22, 34, 56, 0.08);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.56);
+}
+
 .data-action-buttons {
   margin-bottom: 10px;
   flex-wrap: wrap;
+}
+
+body[data-screen="data-workforce"] .data-column-side {
+  position: sticky;
+  top: 22px;
+}
+
+body[data-screen="data-workforce"] .status-table tr[data-employee-number] {
+  cursor: pointer;
+}
+
+body[data-screen="data-workforce"] .status-table tr[data-employee-number]:hover {
+  background: rgba(27, 95, 191, 0.06);
+}
+
+body[data-screen="data-workforce"] .status-table tr.active-row {
+  background:
+    linear-gradient(180deg, rgba(230, 238, 255, 0.96), rgba(245, 249, 255, 0.96)),
+    rgba(27, 95, 191, 0.08);
+  box-shadow: inset 3px 0 0 rgba(27, 95, 191, 0.8);
+}
+
+body[data-screen="data-workforce"] .data-action-panel-workforce {
+  background:
+    linear-gradient(180deg, rgba(232, 247, 241, 0.54), rgba(255, 255, 255, 0.94)),
+    rgba(255, 255, 255, 0.92);
+}
+
+body[data-screen="data-workforce"] .data-action-panel-workforce::before {
+  background: linear-gradient(180deg, rgba(0, 122, 94, 0.88), rgba(27, 95, 191, 0.68));
 }
 
 body[data-screen="data-workforce"] .bullet-stack > div,
@@ -1375,6 +1443,10 @@ body[data-screen^="data-external"] .bullet-stack > div {
   .data-metric-block,
   .data-workbench.two-pane {
     grid-template-columns: 1fr;
+  }
+
+  body[data-screen="data-workforce"] .data-column-side {
+    position: static;
   }
 
   .settings-command-grid {

@@ -743,6 +743,7 @@ const organizationAdminState = {
 const workforceAdminState = {
   items: [],
   organizationCode: "",
+  selectedEmployeeNumber: "",
 };
 
 function escapeHtml(value) {
@@ -1311,6 +1312,180 @@ function summarizeWorkforceActions(items, organizationCode) {
   ];
 }
 
+function setSelectedWorkforceEmployeeNumber(employeeNumber) {
+  workforceAdminState.selectedEmployeeNumber = employeeNumber || "";
+}
+
+function getSelectedWorkforceItem(items) {
+  if (!items.length) return null;
+  const selected =
+    items.find((item) => item.employee_number === workforceAdminState.selectedEmployeeNumber) || null;
+  return selected || items[0] || null;
+}
+
+function summarizeWorkforceDirectory(items, organizationCode) {
+  if (!items.length) {
+    return [{ title: "표시 대상 없음", body: `${organizationCode || "전체"} 기준 인력 데이터가 없습니다.` }];
+  }
+
+  const activeCount = items.filter((item) => item.employment_status !== "inactive").length;
+  const orgCount = new Set(items.map((item) => item.primary_organization_code).filter(Boolean)).size;
+  const jobFamilyCount = new Set(items.map((item) => item.job_family).filter(Boolean)).size;
+
+  return [
+    {
+      title: `${organizationCode || "전체"} 범위 ${items.length}명`,
+      body: `활성 ${activeCount}명 · 조직 ${orgCount}개 · 직군 ${jobFamilyCount}개 기준으로 보고 있습니다.`,
+    },
+    {
+      title: "이 페이지에서 얻는 정보",
+      body: "누가 어디 소속인지, 어떤 인력이 기준 참조 축인지, 어느 조직으로 이동시킬지 한 번에 판단합니다.",
+    },
+  ];
+}
+
+function summarizeSelectedWorkforce(selected, organizationCode, items) {
+  if (!selected) {
+    return [{ title: "선택 인력 없음", body: `${organizationCode || "현재 필터"} 범위에서 인력을 선택해 상세와 조치 흐름을 확인하세요.` }];
+  }
+
+  const peers = items.filter(
+    (item) =>
+      item.primary_organization_code === selected.primary_organization_code &&
+      item.employment_status !== "inactive",
+  ).length;
+
+  return [
+    {
+      title: `${selected.display_name} (${selected.employee_number})`,
+      body: `${selected.primary_organization_name || "미지정"} · ${selected.employment_status} · ${selected.job_family || "직군 미정"}`,
+    },
+    {
+      title: "현재 조직 문맥",
+      body: `${selected.primary_organization_name || "현재 조직"} 에서 함께 보이는 활성 인력 ${peers}명 중 한 명입니다.`,
+    },
+    {
+      title: "참조 사용 위치",
+      body: "프로젝트 책임자와 업무 항목 담당자/등록자 매핑 기준으로 연결될 수 있는 인력입니다.",
+    },
+  ];
+}
+
+function summarizeWorkforceOrganizationContext(selected, items, organizationCode) {
+  if (!selected) {
+    return [{ title: "조직 맥락 없음", body: `${organizationCode || "현재 필터"} 범위에서 인력을 선택하면 같은 조직 구성과 인접 문맥이 표시됩니다.` }];
+  }
+
+  const peers = items.filter((item) => item.primary_organization_code === selected.primary_organization_code);
+  const sameFamily = peers.filter((item) => item.job_family && item.job_family === selected.job_family).length;
+
+  return [
+    {
+      title: `${selected.primary_organization_name || "미지정"} 조직 맥락`,
+      body: `현재 필터 안에서 같은 조직 소속 ${peers.length}명, 같은 직군 ${sameFamily}명이 확인됩니다.`,
+    },
+    {
+      title: "운영자가 이 페이지에서 하는 판단",
+      body: "조직별 인력 과밀/공백, 기준 참조 대상 누락, 이동 후 조직 수용 상태를 함께 확인합니다.",
+    },
+  ];
+}
+
+function summarizeWorkforceImpact(selected) {
+  if (!selected) {
+    return [{ title: "후속 점검 없음", body: "선택 인력이 없으면 이동 또는 비활성화 후속 점검 항목을 계산할 수 없습니다." }];
+  }
+
+  return [
+    {
+      title: "도메인 참조 확인",
+      body: `${selected.display_name} 변경 후에는 프로젝트 책임자, 업무 항목 담당자/등록자 참조가 정상인지 다시 봐야 합니다.`,
+    },
+    {
+      title: "조직 정원 관점",
+      body: "조직 이동 시 현재 조직과 대상 조직의 활성 인력 수가 함께 변하므로 두 조직을 같이 확인해야 합니다.",
+    },
+    {
+      title: "감사 추적",
+      body: "이동 또는 비활성화 후에는 조직 관리 화면의 구성원 이동 이력과 함께 변경 사실을 재확인합니다.",
+    },
+  ];
+}
+
+function summarizeWorkforceActionPreview(items) {
+  const organizationCode = document.getElementById("member-organization-code-input")?.value.trim();
+  const targetOrganizationCode = document.getElementById("member-target-organization-code-input")?.value.trim();
+  const employeeNumber = document.getElementById("member-employee-number-input")?.value.trim();
+  const employmentStatus = document.getElementById("member-employment-status-input")?.value.trim();
+
+  if (!organizationCode || !employeeNumber) {
+    return [{ title: "입력 필요", body: "현재 소속 조직과 사번을 입력하면 이동 또는 비활성화 영향을 미리 볼 수 있습니다." }];
+  }
+
+  const member = items.find((item) => item.employee_number === employeeNumber) || null;
+  const currentCount = items.filter(
+    (item) => item.primary_organization_code === organizationCode && item.employment_status !== "inactive",
+  ).length;
+
+  if (!member) {
+    return [
+      {
+        title: "신규 등록 모드",
+        body: `${organizationCode} 에 새 구성원을 등록할 예정입니다. 현재 이 범위에서 같은 조직 활성 인력은 ${currentCount}명입니다.`,
+      },
+      {
+        title: "입력 점검",
+        body: "신규 등록 시 이동 대상 조직은 비워두고, 재직 상태와 직군을 먼저 확정하는 편이 안전합니다.",
+      },
+    ];
+  }
+
+  if (employmentStatus === "inactive" && !targetOrganizationCode) {
+    return [
+      {
+        title: "비활성화 영향",
+        body: `${member.display_name} 을 비활성화하면 현재 조직 활성 인력은 ${Math.max(currentCount - 1, 0)}명으로 줄어듭니다.`,
+      },
+      {
+        title: "후속 확인",
+        body: "비활성화 뒤에는 이 인력을 참조하는 프로젝트/업무 항목 누락이 없는지 함께 점검해야 합니다.",
+      },
+    ];
+  }
+
+  if (targetOrganizationCode) {
+    const targetCount = items.filter(
+      (item) =>
+        item.primary_organization_code === targetOrganizationCode && item.employment_status !== "inactive",
+    ).length;
+
+    return [
+      {
+        title: "이동 영향",
+        body:
+          targetOrganizationCode === organizationCode
+            ? "같은 조직으로 이동할 수는 없습니다. 이동이 아니라 현재 정보 수정으로 처리됩니다."
+            : `${member.display_name} 이동 시 현재 조직은 ${Math.max(currentCount - 1, 0)}명, 대상 조직은 ${targetCount + 1}명으로 바뀝니다.`,
+      },
+      {
+        title: "운영 체크",
+        body: "이동 후에는 대상 조직 화면과 조직 변경 이력을 함께 열어 후속 반영을 확인하는 편이 좋습니다.",
+      },
+    ];
+  }
+
+  return [
+    {
+      title: "현재 정보 수정 모드",
+      body: `${member.display_name} 의 인적 정보 또는 상태를 현재 조직 ${organizationCode} 문맥에서 수정합니다.`,
+    },
+    {
+      title: "후속 확인",
+      body: "이름, 직군, 이메일 같은 참조 정보가 바뀌면 이후 운영 조회 화면에서도 반영 여부를 확인해야 합니다.",
+    },
+  ];
+}
+
 function getOrganizationDepthMap(organizations) {
   const byCode = new Map(organizations.map((item) => [item.organization_code, item]));
   const memo = new Map();
@@ -1560,6 +1735,7 @@ function renderWorkforceAdminView() {
   const organizationCode = workforceAdminState.organizationCode;
   const items = workforceAdminState.items;
   const filteredItems = getFilteredWorkforceItems(items);
+  const selected = getSelectedWorkforceItem(filteredItems);
   const jobFamilies = new Set(
     filteredItems.map((item) => item.job_family).filter((item) => Boolean(item)),
   ).size;
@@ -1569,35 +1745,57 @@ function renderWorkforceAdminView() {
     { label: "활성 인력", value: `${filteredItems.length}/${items.length}명` },
     { label: "직군 정보", value: `${jobFamilies}개` },
   ]);
-  renderBulletSummary(
-    "data-admin-workforce-summary",
-    filteredItems.slice(0, 4).map((item) => ({
-      title: `${item.display_name} (${item.employee_number})`,
-      body: `${item.primary_organization_name || "미지정"} · ${item.employment_status}${item.job_family ? ` · ${item.job_family}` : ""}`,
-    })),
-    "조건에 맞는 인력이 없습니다.",
-  );
+  if (!selected && filteredItems[0]) {
+    setSelectedWorkforceEmployeeNumber(filteredItems[0].employee_number);
+  } else if (selected) {
+    setSelectedWorkforceEmployeeNumber(selected.employee_number);
+  }
+  const activeSelected = getSelectedWorkforceItem(filteredItems);
+
+  renderBulletSummary("workforce-directory-summary", summarizeWorkforceDirectory(filteredItems, organizationCode), "조건에 맞는 인력이 없습니다.");
   renderTableRows(
     "data-admin-workforce-body",
     filteredItems.slice(0, 12).map(
       (item) =>
-        `<tr><td class="mono">${escapeHtml(item.employee_number)}</td><td>${escapeHtml(
+        `<tr data-employee-number="${escapeHtml(item.employee_number)}" data-display-name="${escapeHtml(
+          item.display_name,
+        )}" data-primary-organization-code="${escapeHtml(item.primary_organization_code || "")}" data-primary-organization-name="${escapeHtml(
+          item.primary_organization_name || "",
+        )}" data-employment-status="${escapeHtml(item.employment_status)}" data-job-family="${escapeHtml(
+          item.job_family || "",
+        )}" data-email="${escapeHtml(item.email || "")}"><td class="mono">${escapeHtml(item.employee_number)}</td><td>${escapeHtml(
           item.display_name,
         )}</td><td>${escapeHtml(item.primary_organization_name || "미지정")}</td></tr>`,
     ),
     "조건에 맞는 인력이 없습니다.",
   );
   renderBulletSummary(
-    "workforce-admin-detail-summary",
-    summarizeWorkforceDetail(filteredItems, organizationCode),
-    "대표 인력 상세가 없습니다.",
+    "workforce-selected-summary",
+    summarizeSelectedWorkforce(activeSelected, organizationCode, filteredItems),
+    "선택 인력 상세가 없습니다.",
+  );
+  renderBulletSummary(
+    "workforce-organization-context-summary",
+    summarizeWorkforceOrganizationContext(activeSelected, filteredItems, organizationCode),
+    "조직 맥락을 계산하지 못했습니다.",
   );
   renderBulletSummary(
     "workforce-admin-action-summary",
-    summarizeWorkforceActions(filteredItems, organizationCode),
+    summarizeWorkforceActions(activeSelected ? [activeSelected] : filteredItems, organizationCode),
     "운영 액션이 없습니다.",
   );
+  renderBulletSummary(
+    "workforce-impact-summary",
+    summarizeWorkforceImpact(activeSelected),
+    "후속 영향이 없습니다.",
+  );
+  renderBulletSummary(
+    "workforce-action-preview",
+    summarizeWorkforceActionPreview(filteredItems),
+    "액션 미리보기를 계산하지 못했습니다.",
+  );
   renderWorkforceFilterSummary(filteredItems.length, items.length, organizationCode, getWorkforceFilterState().query);
+  renderWorkforceSelectionState(activeSelected);
 }
 
 function renderWorkforceFilterSummary(filteredCount, totalCount, organizationCode, query) {
@@ -1609,6 +1807,58 @@ function renderWorkforceFilterSummary(filteredCount, totalCount, organizationCod
   target.innerHTML = `<span class="status-chip ok">표시 ${escapeHtml(String(filteredCount))}/${escapeHtml(
     String(totalCount),
   )}</span><p>${escapeHtml(orgLabel)} · ${escapeHtml(queryLabel)}</p>`;
+}
+
+function renderWorkforceSelectionState(selected) {
+  const banner = document.getElementById("workforce-selected-banner");
+  if (banner) {
+    if (!selected) {
+      banner.innerHTML =
+        '<div class="status-chip">선택 대기</div><p>목록에서 인력을 선택하면 현재 작업 대상과 조직 문맥이 여기에 표시됩니다.</p>';
+    } else {
+      banner.innerHTML = `<div class="status-chip ok">현재 선택: ${escapeHtml(
+        selected.display_name,
+      )}</div><p>${escapeHtml(selected.primary_organization_name || "미지정")} · 사번 ${escapeHtml(
+        selected.employee_number,
+      )} · 재직 상태 ${escapeHtml(selected.employment_status)}</p>`;
+    }
+  }
+
+  const workforceRows = document.querySelectorAll("#data-admin-workforce-body tr[data-employee-number]");
+  workforceRows.forEach((row) => {
+    row.classList.toggle("active-row", row.dataset.employeeNumber === workforceAdminState.selectedEmployeeNumber);
+  });
+}
+
+function populateWorkforceForm(record, organizationCodeOverride) {
+  const organizationInput = document.getElementById("member-organization-code-input");
+  const employeeInput = document.getElementById("member-employee-number-input");
+  const displayNameInput = document.getElementById("member-display-name-input");
+  const employmentStatusInput = document.getElementById("member-employment-status-input");
+  const targetOrganizationInput = document.getElementById("member-target-organization-code-input");
+  const jobFamilyInput = document.getElementById("member-job-family-input");
+  const emailInput = document.getElementById("member-email-input");
+
+  if (!record) {
+    if (organizationInput) organizationInput.value = organizationCodeOverride || workforceAdminState.organizationCode || "";
+    if (employeeInput) employeeInput.value = "E1001";
+    if (displayNameInput) displayNameInput.value = "홍관리";
+    if (employmentStatusInput) employmentStatusInput.value = "active";
+    if (targetOrganizationInput) targetOrganizationInput.value = "";
+    if (jobFamilyInput) jobFamilyInput.value = "operations";
+    if (emailInput) emailInput.value = "ops@example.com";
+    return;
+  }
+
+  if (organizationInput) {
+    organizationInput.value = organizationCodeOverride || record.primary_organization_code || workforceAdminState.organizationCode || "";
+  }
+  if (employeeInput) employeeInput.value = record.employee_number || "";
+  if (displayNameInput) displayNameInput.value = record.display_name || "";
+  if (employmentStatusInput) employmentStatusInput.value = record.employment_status || "active";
+  if (targetOrganizationInput) targetOrganizationInput.value = "";
+  if (jobFamilyInput) jobFamilyInput.value = record.job_family || "";
+  if (emailInput) emailInput.value = record.email || "";
 }
 
 function summarizeOrganizationActionPreview(organizations, workforceItems) {
@@ -2495,7 +2745,11 @@ async function loadWorkforceAdminLiveData() {
     const workforceItems = workforce?.items || [];
     workforceAdminState.items = workforceItems;
     workforceAdminState.organizationCode = organizationCode;
+    if (!workforceItems.find((item) => item.employee_number === workforceAdminState.selectedEmployeeNumber)) {
+      setSelectedWorkforceEmployeeNumber(workforceItems[0]?.employee_number || "");
+    }
     renderWorkforceAdminView();
+    populateWorkforceForm(getSelectedWorkforceItem(getFilteredWorkforceItems(workforceItems)), organizationCode);
 
     setApiStatus("ok", `인력 마스터 연결 완료. ${organizationCode || "전체"} 기준 ${workforceItems.length}명입니다.`);
   } catch (error) {
@@ -2506,14 +2760,18 @@ async function loadWorkforceAdminLiveData() {
       { label: "활성 인력", value: "-" },
       { label: "직군 정보", value: "-" },
     ]);
-    renderBulletSummary("data-admin-workforce-summary", [], "인력 요약을 불러오지 못했습니다.");
+    renderBulletSummary("workforce-directory-summary", [], "인력 범위 요약을 불러오지 못했습니다.");
     renderTableRows("data-admin-workforce-body", [], "인력 목록을 불러오지 못했습니다.");
-    renderBulletSummary("workforce-admin-detail-summary", [], "대표 인력 상세를 불러오지 못했습니다.");
+    renderBulletSummary("workforce-selected-summary", [], "선택 인력 상세를 불러오지 못했습니다.");
+    renderBulletSummary("workforce-organization-context-summary", [], "조직 맥락을 계산하지 못했습니다.");
     renderBulletSummary("workforce-admin-action-summary", [], "운영 액션을 계산하지 못했습니다.");
+    renderBulletSummary("workforce-impact-summary", [], "후속 영향 계산에 실패했습니다.");
+    renderBulletSummary("workforce-action-preview", [], "액션 미리보기를 계산하지 못했습니다.");
     const filterSummary = document.getElementById("workforce-filter-summary");
     if (filterSummary) {
       filterSummary.innerHTML = `<span class="status-chip danger">필터 오류</span><p>필터 요약을 계산하지 못했습니다.</p>`;
     }
+    renderWorkforceSelectionState(null);
     setApiStatus("danger", `인력 마스터 연결 실패: ${error.message}`);
   }
 }
@@ -2787,6 +3045,26 @@ function setupWorkforceAdminActions(load) {
     });
   }
 
+  const workforceTable = document.getElementById("data-admin-workforce-body");
+  if (workforceTable) {
+    workforceTable.addEventListener("click", (event) => {
+      const row = event.target.closest("tr[data-employee-number]");
+      if (!row) return;
+      const record = {
+        employee_number: row.dataset.employeeNumber || "",
+        display_name: row.dataset.displayName || "",
+        primary_organization_code: row.dataset.primaryOrganizationCode || "",
+        primary_organization_name: row.dataset.primaryOrganizationName || "",
+        employment_status: row.dataset.employmentStatus || "active",
+        job_family: row.dataset.jobFamily || "",
+        email: row.dataset.email || "",
+      };
+      setSelectedWorkforceEmployeeNumber(record.employee_number);
+      populateWorkforceForm(record, record.primary_organization_code);
+      renderWorkforceAdminView();
+    });
+  }
+
   const workforceFilterResetButton = document.getElementById("workforce-filter-reset-button");
   if (workforceFilterResetButton) {
     workforceFilterResetButton.addEventListener("click", () => {
@@ -2796,9 +3074,34 @@ function setupWorkforceAdminActions(load) {
         filterInput.value = getSelectedOrganizationCode() || "";
       }
       if (searchInput) searchInput.value = "";
+      setSelectedWorkforceEmployeeNumber("");
       load();
     });
   }
+
+  [
+    "member-organization-code-input",
+    "member-employee-number-input",
+    "member-target-organization-code-input",
+    "member-employment-status-input",
+  ].forEach((id) => {
+    const element = document.getElementById(id);
+    if (!element) return;
+    element.addEventListener("input", () => {
+      renderBulletSummary(
+        "workforce-action-preview",
+        summarizeWorkforceActionPreview(getFilteredWorkforceItems(workforceAdminState.items)),
+        "액션 미리보기를 계산하지 못했습니다.",
+      );
+    });
+    element.addEventListener("change", () => {
+      renderBulletSummary(
+        "workforce-action-preview",
+        summarizeWorkforceActionPreview(getFilteredWorkforceItems(workforceAdminState.items)),
+        "액션 미리보기를 계산하지 못했습니다.",
+      );
+    });
+  });
 
   saveButton.addEventListener("click", async () => {
     const baseUrl = getActiveApiBaseUrl();

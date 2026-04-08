@@ -19,8 +19,8 @@
           <p class="eyebrow">Integrated Data Admin</p>
           <h1>조직 관리</h1>
           <p class="topbar-summary">
-            시스템 관리자가 조직 구조, 구성원 이동, 변경 영향, 감사 이력을 한 작업면에서 연속적으로 다루는
-            디렉터리형 관리 콘솔
+            시스템 관리자가 이 조직의 위치와 규모를 파악하고, 누가 속해 있는지 확인한 뒤, 구조 변경과 인력 이동을
+            안전하게 처리하는 디렉터리형 관리 콘솔
           </p>
         </div>
         <div class="org-topbar-meta">
@@ -66,9 +66,9 @@
           <section class="sidebar-note">
             <h2>운영 포인트</h2>
             <ul>
-              <li>선택 조직의 상위 경로와 하위 규모를 먼저 확인한다.</li>
-              <li>구성원 이동과 비활성화는 조직 상세 문맥 안에서 처리한다.</li>
-              <li>조직 삭제 전에는 하위 조직과 활성 구성원 존재 여부를 점검한다.</li>
+              <li>이 조직이 어디에 속하고 얼마나 큰지 먼저 이해한다.</li>
+              <li>이 조직에서 바로 조작할 수 있는 조직/구성원 작업을 분리해 본다.</li>
+              <li>삭제나 이동 전에는 하위 조직, 활성 인원, 후속 영향부터 확인한다.</li>
             </ul>
           </section>
         </aside>
@@ -79,7 +79,7 @@
               <p class="eyebrow">Organization Master</p>
               <h2>조직 디렉터리 운영면</h2>
               <p class="panel-copy" id="page-role-summary">
-                조직 마스터를 단순 목록이 아니라 구조, 영향, 구성원 액션, 최근 변경 이력 기준으로 운영합니다.
+                조직 마스터를 단순 목록이 아니라 위치, 규모, 직속 인력, 변경 영향, 최근 이력 기준으로 운영합니다.
               </p>
               <div class="bullet-stack compact-bullets" id="page-role-points"></div>
             </div>
@@ -160,7 +160,7 @@
             <div class="org-column org-column-inspector">
               <section class="panel org-panel org-focus-panel">
                 <div class="panel-head">
-                  <h3>선택 조직 인스펙터</h3>
+                  <h3>이 조직을 이해하기</h3>
                   <span>Inspector</span>
                 </div>
                 <div class="org-selected-banner" id="organization-selected-banner">
@@ -179,7 +179,7 @@
 
               <section class="panel org-panel">
                 <div class="panel-head">
-                  <h3>직속 구성원</h3>
+                  <h3>이 조직의 직속 구성원</h3>
                   <span>Direct Members</span>
                 </div>
                 <div class="table-scroll">
@@ -196,7 +196,7 @@
 
               <section class="panel org-panel">
                 <div class="panel-head">
-                  <h3>운영 판단</h3>
+                  <h3>변경 전에 확인할 영향</h3>
                   <span>Impact and Checklist</span>
                 </div>
                 <div class="detail-grid two-col">
@@ -213,7 +213,7 @@
             <div class="org-column org-column-actions">
               <section class="panel org-panel org-action-panel org-action-panel-primary">
                 <div class="panel-head">
-                  <h3>조직 액션</h3>
+                  <h3>조직 구조 변경</h3>
                   <span>Create · Update · Delete</span>
                 </div>
                 <p class="org-action-lead">조직 코드, 계층, 상태, 유효기간처럼 조직 자체의 구조 속성을 조정합니다.</p>
@@ -267,7 +267,7 @@
 
               <section class="panel org-panel org-action-panel org-action-panel-secondary">
                 <div class="panel-head">
-                  <h3>구성원 액션</h3>
+                  <h3>구성원 배치 변경</h3>
                   <span>Joiner · Mover · Leaver</span>
                 </div>
                 <p class="org-action-lead">선택 조직 기준으로 직속 구성원을 등록하고, 이동하거나 비활성화합니다.</p>

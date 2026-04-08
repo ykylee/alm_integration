@@ -19,7 +19,8 @@
           <p class="eyebrow">Integrated Data Admin</p>
           <h1>인력 관리</h1>
           <p class="topbar-summary">
-            조직 기준 인력 목록, 소속 변경, 비활성화 흐름을 한 작업면에서 다루는 시스템 관리자용 인력 디렉터리
+            누가 어느 조직에 속해 있고, 어떤 인력이 참조 축으로 쓰이며, 지금 어떤 이동이나 정정이 필요한지를
+            한 화면에서 판단하는 시스템 관리자용 인력 운영 작업면
           </p>
         </div>
         <div class="data-topbar-meta">
@@ -56,9 +57,9 @@
           <section class="sidebar-note">
             <h2>운영 포인트</h2>
             <ul>
-              <li>조직 필터 기준으로 인력 범위를 먼저 좁힌다.</li>
-              <li>이동과 비활성화는 같은 액션 레일에서 처리한다.</li>
-              <li>조직 상세와 인력 상세는 서로 왕복 가능해야 한다.</li>
+              <li>어느 조직의 어떤 인력을 보고 있는지 먼저 분명히 확인한다.</li>
+              <li>이동과 비활성화 전에는 참조 영향과 대상 조직 수용 상태를 본다.</li>
+              <li>인력 수정은 조직 맥락과 같은 화면 안에서 끝낼 수 있어야 한다.</li>
             </ul>
           </section>
         </aside>
@@ -69,7 +70,7 @@
               <p class="eyebrow">Workforce Master</p>
               <h2>조직별 인력 디렉터리</h2>
               <p class="panel-copy" id="page-role-summary">
-                조직 기준 인력 목록을 조회하고, 대표 인력 상태와 조직 이동 액션을 같은 화면에서 관리합니다.
+                조직 단위 인력 현황, 선택 인력 상세, 참조 영향, 조직 이동 액션을 같은 화면에서 연결해 관리합니다.
               </p>
               <div class="bullet-stack compact-bullets" id="page-role-points"></div>
             </div>
@@ -102,7 +103,7 @@
               </div>
               <div class="filter-summary-bar" id="workforce-filter-summary">
                 <span class="status-chip">필터 준비</span>
-                <p>조직 코드와 인력 검색어를 기준으로 목록과 대표 상세가 함께 조정됩니다.</p>
+                <p>조직 코드와 인력 검색어를 기준으로 목록, 선택 인력, 액션 문맥이 함께 조정됩니다.</p>
               </div>
               <p class="status-copy" id="api-status-copy">조직 기준 인력 데이터를 불러옵니다.</p>
             </div>
@@ -118,17 +119,21 @@
 
           <section class="data-workbench two-pane">
             <div class="data-column data-column-main">
-              <section class="panel data-panel">
+              <section class="panel data-panel data-focus-panel">
                 <div class="panel-head">
-                  <h3>인력 디렉터리</h3>
-                  <span>Directory</span>
+                  <h3>선택 인력 인스펙터</h3>
+                  <span>Inspector</span>
+                </div>
+                <div class="data-selected-banner" id="workforce-selected-banner">
+                  <div class="status-chip">선택 대기</div>
+                  <p>목록에서 인력을 선택하면 현재 작업 대상과 조직 문맥이 여기에 표시됩니다.</p>
                 </div>
                 <div class="detail-grid two-col">
-                  <div class="bullet-stack" id="data-admin-workforce-summary">
-                    <div><strong>불러오는 중</strong><p>인력 요약을 확인합니다.</p></div>
+                  <div class="bullet-stack" id="workforce-directory-summary">
+                    <div><strong>불러오는 중</strong><p>현재 필터 범위의 인력 분포를 요약합니다.</p></div>
                   </div>
-                  <div class="bullet-stack" id="workforce-admin-detail-summary">
-                    <div><strong>불러오는 중</strong><p>대표 인력의 속성과 소속 상태를 확인합니다.</p></div>
+                  <div class="bullet-stack" id="workforce-selected-summary">
+                    <div><strong>불러오는 중</strong><p>선택 인력의 속성과 현재 소속 상태를 확인합니다.</p></div>
                   </div>
                 </div>
               </section>
@@ -149,24 +154,30 @@
 
               <section class="panel data-panel">
                 <div class="panel-head">
-                  <h3>운영 액션</h3>
-                  <span>Checklist</span>
+                  <h3>이 인력에서 확인할 운영 맥락</h3>
+                  <span>Context and Impact</span>
                 </div>
-                <div class="bullet-stack" id="workforce-admin-action-summary">
-                  <div><strong>불러오는 중</strong><p>인력 보정과 참조 점검 액션을 준비합니다.</p></div>
+                <div class="detail-grid two-col">
+                  <div class="bullet-stack" id="workforce-organization-context-summary">
+                    <div><strong>불러오는 중</strong><p>선택 인력이 속한 조직과 같은 범위 구성원을 요약합니다.</p></div>
+                  </div>
+                  <div class="bullet-stack" id="workforce-admin-action-summary">
+                    <div><strong>불러오는 중</strong><p>인력 보정과 참조 점검 액션을 준비합니다.</p></div>
+                  </div>
                 </div>
               </section>
             </div>
 
             <div class="data-column data-column-side">
-              <section class="panel data-panel data-action-panel">
+              <section class="panel data-panel data-action-panel data-action-panel-workforce">
                 <div class="panel-head">
                   <h3>구성원 액션</h3>
                   <span>Joiner · Mover · Leaver</span>
                 </div>
+                <p class="data-action-lead">선택 인력을 기준으로 소속 정정, 신규 등록, 이동, 비활성화를 같은 흐름에서 처리합니다.</p>
                 <div class="control-grid data-form-grid">
                   <label class="control-field">
-                    <span>대상 조직</span>
+                    <span>현재 소속 조직</span>
                     <input class="control-input" id="member-organization-code-input" type="text" value="default_org" />
                   </label>
                   <label class="control-field">
@@ -199,6 +210,19 @@
                   <button class="control-button secondary" id="member-remove-button" type="button">구성원 제거</button>
                 </div>
                 <p class="status-copy" id="member-action-status">조직 구성원 관리 액션 대기 중</p>
+                <div class="bullet-stack compact-bullets" id="workforce-action-preview">
+                  <div><strong>영향 미리보기 대기</strong><p>이동 또는 비활성화 전에 선택 인력과 조직 영향이 여기에 표시됩니다.</p></div>
+                </div>
+              </section>
+
+              <section class="panel data-panel">
+                <div class="panel-head">
+                  <h3>조치 후 확인할 것</h3>
+                  <span>Checklist</span>
+                </div>
+                <div class="bullet-stack" id="workforce-impact-summary">
+                  <div><strong>불러오는 중</strong><p>이동 또는 비활성화 이후에 점검할 후속 반영 대상을 준비합니다.</p></div>
+                </div>
               </section>
             </div>
           </section>
