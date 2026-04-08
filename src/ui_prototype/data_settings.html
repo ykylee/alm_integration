@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Schubert Integration Settings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body data-screen="data-settings">
+    <div class="app-shell">
+      <header class="topbar data-topbar">
+        <div class="topbar-copy">
+          <p class="eyebrow">Integrated Data Admin</p>
+          <h1>연결 설정</h1>
+          <p class="topbar-summary">
+            운영 화면에서 공통으로 사용하는 관리자 API URL을 별도 화면에서 저장하고 검증하는 시스템 관리자용 설정 콘솔
+          </p>
+        </div>
+        <div class="data-topbar-meta">
+          <div class="status-chip danger" id="page-role-chip">시스템 관리자 전용</div>
+          <div class="data-reference-note">
+            <strong>Settings Console</strong>
+            <p>연결 설정은 여기서만 바꾸고, 데이터 CRUD 는 각 운영 화면에서 그대로 수행합니다.</p>
+          </div>
+        </div>
+      </header>
+
+      <div class="layout">
+        <aside class="sidebar data-sidebar">
+          <div class="brand-block">
+            <p class="brand-name">SETTINGS CONTROL</p>
+            <p class="brand-copy">데이터 관리 화면 전반에 공통 적용되는 연결 설정 작업면</p>
+          </div>
+
+          <nav class="screen-nav" aria-label="설정 화면">
+            <a class="nav-item" data-screen="data-organizations" href="./data_organizations.html">
+              <span class="nav-index">O1</span>
+              <span><strong>조직 관리</strong><small>구조, 영향, 변경 이력</small></span>
+            </a>
+            <a class="nav-item" data-screen="data-workforce" href="./data_workforce.html">
+              <span class="nav-index">W1</span>
+              <span><strong>인력 관리</strong><small>조직별 인력 리스트</small></span>
+            </a>
+            <a class="nav-item" data-screen="data-settings" href="./data_settings.html">
+              <span class="nav-index">S1</span>
+              <span><strong>연결 설정</strong><small>관리자 API URL 저장</small></span>
+            </a>
+          </nav>
+        </aside>
+
+        <main class="workspace data-workspace">
+          <section class="data-command-deck">
+            <div class="data-command-copy">
+              <p class="eyebrow">Connection Settings</p>
+              <h2>관리자 API 연결 설정</h2>
+              <p class="panel-copy" id="page-role-summary">
+                데이터 운영 화면에서는 저장된 관리자 API URL만 사용하고, 실제 수정과 연결 검증은 이 화면에서만 수행합니다.
+              </p>
+              <div class="bullet-stack compact-bullets" id="page-role-points"></div>
+            </div>
+            <div class="data-command-panel">
+              <div class="panel-head compact">
+                <div>
+                  <h3 id="page-role-title">Connection Settings</h3>
+                  <span id="page-role-kicker">Settings Focus</span>
+                </div>
+                <div class="status-chip" id="api-status-chip">연결 대기</div>
+              </div>
+              <div class="control-grid data-command-grid settings-command-grid">
+                <label class="control-field">
+                  <span>관리자 API Base URL</span>
+                  <input
+                    class="control-input"
+                    id="api-base-url-settings-input"
+                    type="text"
+                    value="http://127.0.0.1:8080/api/v1"
+                  />
+                </label>
+                <div class="control-actions">
+                  <button class="control-button" id="api-settings-save-button" type="button">저장</button>
+                  <button class="control-button" id="api-settings-test-button" type="button">연결 확인</button>
+                  <button class="control-button secondary" id="api-settings-reset-button" type="button">기본값 복원</button>
+                </div>
+              </div>
+              <p class="status-copy" id="api-status-copy">저장된 관리자 API URL을 확인하고 연결 상태를 검증합니다.</p>
+            </div>
+          </section>
+
+          <section class="data-stat-strip">
+            <div class="metric-block data-metric-block">
+              <div><span>현재 저장 값</span><strong class="mono" data-api-base-url-display>http://127.0.0.1:8080/api/v1</strong></div>
+              <div><span>적용 대상</span><strong>조직 · 인력 · ALM · 외부 연계</strong></div>
+              <div><span>운영 원칙</span><strong>연결 설정만 분리</strong></div>
+            </div>
+          </section>
+
+          <section class="data-workbench two-pane">
+            <div class="data-column data-column-main">
+              <section class="panel data-panel">
+                <div class="panel-head">
+                  <h3>설정 원칙</h3>
+                  <span>Guidelines</span>
+                </div>
+                <div class="bullet-stack">
+                  <div><strong>설정 분리</strong><p>운영 화면에서는 연결 값만 읽고, 데이터 CRUD 는 각 화면의 액션 레일에서 그대로 처리합니다.</p></div>
+                  <div><strong>공통 적용</strong><p>여기서 저장한 관리자 API URL은 데이터 관리 하위 화면 전체에서 공통으로 사용됩니다.</p></div>
+                  <div><strong>검증 우선</strong><p>저장 전에 `연결 확인`으로 `health` 응답을 먼저 확인하는 흐름을 권장합니다.</p></div>
+                </div>
+              </section>
+            </div>
+
+            <div class="data-column data-column-side">
+              <section class="panel data-panel">
+                <div class="panel-head">
+                  <h3>운영 지원 액션</h3>
+                  <span>Support Actions</span>
+                </div>
+                <div class="control-actions">
+                  <button class="control-button secondary" id="settings-dummy-button" type="button">조직/인력 더미 데이터 생성</button>
+                </div>
+                <p class="status-copy" id="settings-support-status">연결 확인과 샘플 데이터 적재를 이 화면에서 수행합니다.</p>
+              </section>
+
+              <section class="panel data-panel">
+                <div class="panel-head">
+                  <h3>적용 메모</h3>
+                  <span>Scope</span>
+                </div>
+                <div class="bullet-stack">
+                  <div><strong>조직 관리</strong><p>검색, 트리, 이력, 영향 프리뷰에서 저장된 연결 값을 사용합니다.</p></div>
+                  <div><strong>인력 관리</strong><p>조직 필터 기반 인력 조회와 멤버 액션이 저장된 연결 값을 사용합니다.</p></div>
+                  <div><strong>외부 시스템/ALM</strong><p>시스템별 실행 이력과 내부 표준 데이터 조회도 같은 설정을 공유합니다.</p></div>
+                </div>
+              </section>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+    <script src="./app.js"></script>
+  </body>
+</html>

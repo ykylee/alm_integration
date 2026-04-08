@@ -44,6 +44,10 @@ fn integration_runtime_migration_files_exist() {
         include_str!("../migrations/20260408133000_add_domain_master_reference_columns.up.sql");
     let domain_reference_down_sql =
         include_str!("../migrations/20260408133000_add_domain_master_reference_columns.down.sql");
+    let master_data_log_up_sql =
+        include_str!("../migrations/20260408152000_add_master_data_change_log.up.sql");
+    let master_data_log_down_sql =
+        include_str!("../migrations/20260408152000_add_master_data_change_log.down.sql");
 
     assert!(up_sql.contains("create table integration_job"));
     assert!(up_sql.contains("create table integration_run"));
@@ -98,4 +102,8 @@ fn integration_runtime_migration_files_exist() {
     assert!(domain_reference_up_sql.contains("fk_work_item_assignee_workforce"));
     assert!(domain_reference_down_sql.contains("drop column if exists project_owner_workforce_id"));
     assert!(domain_reference_down_sql.contains("drop column if exists reporter_workforce_id"));
+    assert!(master_data_log_up_sql.contains("create table organization_change_log"));
+    assert!(master_data_log_up_sql.contains("create table workforce_change_log"));
+    assert!(master_data_log_down_sql.contains("drop table if exists workforce_change_log"));
+    assert!(master_data_log_down_sql.contains("drop table if exists organization_change_log"));
 }

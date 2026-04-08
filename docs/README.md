@@ -4,7 +4,7 @@
 - 범위: `docs/` 아래 모든 문서
 - 대상 독자: 기획자, 개발자, 운영자, 프로젝트 참여자
 - 상태: draft
-- 최종 수정일: 2026-04-06
+- 최종 수정일: 2026-04-08
 - 관련 문서: `AGENTS.md`
 
 ## 문서 읽기 흐름
@@ -25,6 +25,7 @@
 - 연계 위키: [integrations/README.md](./integrations/README.md)
 - 운영 위키: [operations/README.md](./operations/README.md)
 - 작업 백로그 인덱스: [operations/work_backlog.md](./operations/work_backlog.md)
+- 운영 UI 렌더 점검 및 기능 시나리오: [operations/backend_operation_ui_render_and_scenarios.md](./operations/backend_operation_ui_render_and_scenarios.md)
 
 ## 카테고리 안내
 
@@ -46,9 +47,11 @@
 - 프로젝트 예산 초안: [overview/project_budget_draft.md](./overview/project_budget_draft.md)
 - 프로젝트 발표 목차: [overview/project_presentation_outline.md](./overview/project_presentation_outline.md)
 - 역할 기반 UX 구조 방향: [overview/role_based_ux_direction.md](./overview/role_based_ux_direction.md)
+- 통합 데이터 관리 UI 구조 방향: [overview/integrated_data_management_ui_direction.md](./overview/integrated_data_management_ui_direction.md)
 - 통합 중앙 관리 시스템 CRS: [requirements/system_crs.md](./requirements/system_crs.md)
 - 통합 중앙 관리 시스템 SRS: [requirements/system_srs.md](./requirements/system_srs.md)
 - 통합 중앙 관리 시스템 아키텍처 초안: [architecture/system_architecture_draft.md](./architecture/system_architecture_draft.md)
+- 통합 백엔드 구현 현황 스냅샷: [architecture/current_backend_implementation_status_summary.md](./architecture/current_backend_implementation_status_summary.md)
 - SDLC 시스템 카테고리 정의: [integrations/sdlc_system_categories.md](./integrations/sdlc_system_categories.md)
 
 ## 운영 원칙

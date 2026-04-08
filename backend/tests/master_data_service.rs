@@ -3,8 +3,8 @@ use std::str::FromStr;
 use backend::config::Settings;
 use backend::db::pool::{connect, run_migrations};
 use backend::services::master_data::{
-    MasterDataRepository, OrganizationListFilter, UpsertOrganizationInput, UpsertWorkforceInput,
-    WorkforceListFilter,
+    MasterDataRepository, OrganizationListFilter, UpdateOrganizationInput, UpdateWorkforceInput,
+    UpsertOrganizationInput, UpsertWorkforceInput, WorkforceListFilter,
 };
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::{ConnectOptions, PgPool};
@@ -76,6 +76,176 @@ async fn master_data_repository_upserts_and_lists_organization_and_workforce() -
     assert_eq!(workforce.employee_number, "E9001");
     assert_eq!(workforce.primary_organization_code, "payments");
     assert_eq!(workforce_items[0].display_name, "박연계");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn master_data_repository_supports_hierarchy_update_and_soft_delete() -> anyhow::Result<()> {
+    let Some(test_db) = TestDatabase::create().await? else {
+        eprintln!(
+            "skip master_data_repository_supports_hierarchy_update_and_soft_delete: ALM_BACKEND_TEST_DATABASE_ADMIN_URL not set"
+        );
+        return Ok(());
+    };
+
+    let pool = connect_and_migrate(&test_db).await?;
+    let repository = MasterDataRepository::new(pool.clone());
+
+    repository
+        .upsert_organization(UpsertOrganizationInput {
+            organization_code: "platform".to_string(),
+            organization_name: "Platform".to_string(),
+            parent_organization_code: None,
+            organization_status: "active".to_string(),
+            effective_from: None,
+            effective_to: None,
+        })
+        .await?;
+    repository
+        .upsert_organization(UpsertOrganizationInput {
+            organization_code: "payments".to_string(),
+            organization_name: "Payments".to_string(),
+            parent_organization_code: Some("platform".to_string()),
+            organization_status: "active".to_string(),
+            effective_from: None,
+            effective_to: None,
+        })
+        .await?;
+
+    let updated = repository
+        .update_organization(
+            "payments",
+            UpdateOrganizationInput {
+                organization_name: Some("Payments Group".to_string()),
+                parent_organization_code: Some(Some("platform".to_string())),
+                organization_status: Some("active".to_string()),
+                effective_from: None,
+                effective_to: None,
+            },
+        )
+        .await?;
+
+    assert_eq!(updated.organization_name, "Payments Group");
+
+    let deleted = repository.soft_delete_organization("payments").await?;
+    assert_eq!(deleted.organization_status, "deleted");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn master_data_repository_supports_member_move_and_remove() -> anyhow::Result<()> {
+    let Some(test_db) = TestDatabase::create().await? else {
+        eprintln!(
+            "skip master_data_repository_supports_member_move_and_remove: ALM_BACKEND_TEST_DATABASE_ADMIN_URL not set"
+        );
+        return Ok(());
+    };
+
+    let pool = connect_and_migrate(&test_db).await?;
+    let repository = MasterDataRepository::new(pool.clone());
+
+    for (code, name, parent) in [
+        ("platform", "Platform", None),
+        ("payments", "Payments", Some("platform")),
+    ] {
+        repository
+            .upsert_organization(UpsertOrganizationInput {
+                organization_code: code.to_string(),
+                organization_name: name.to_string(),
+                parent_organization_code: parent.map(|value| value.to_string()),
+                organization_status: "active".to_string(),
+                effective_from: None,
+                effective_to: None,
+            })
+            .await?;
+    }
+
+    repository
+        .upsert_workforce(UpsertWorkforceInput {
+            employee_number: "E1001".to_string(),
+            display_name: "홍관리".to_string(),
+            employment_status: "active".to_string(),
+            primary_organization_code: "platform".to_string(),
+            job_family: Some("operations".to_string()),
+            email: None,
+        })
+        .await?;
+
+    let moved = repository
+        .update_workforce(
+            "E1001",
+            UpdateWorkforceInput {
+                display_name: Some("홍관리자".to_string()),
+                employment_status: Some("active".to_string()),
+                primary_organization_code: Some("payments".to_string()),
+                job_family: Some(Some("platform_ops".to_string())),
+                email: None,
+            },
+        )
+        .await?;
+
+    assert_eq!(moved.primary_organization_code, "payments");
+    assert_eq!(moved.display_name, "홍관리자");
+
+    let removed = repository.soft_delete_workforce("E1001").await?;
+    assert_eq!(removed.employment_status, "inactive");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn master_data_repository_returns_organization_structure_snapshot() -> anyhow::Result<()> {
+    let Some(test_db) = TestDatabase::create().await? else {
+        eprintln!(
+            "skip master_data_repository_returns_organization_structure_snapshot: ALM_BACKEND_TEST_DATABASE_ADMIN_URL not set"
+        );
+        return Ok(());
+    };
+
+    let pool = connect_and_migrate(&test_db).await?;
+    let repository = MasterDataRepository::new(pool.clone());
+
+    for (code, name, parent) in [
+        ("division", "플랫폼사업부", None),
+        ("team", "통합플랫폼팀", Some("division")),
+        ("group", "데이터허브그룹", Some("team")),
+        ("part", "수집연계파트", Some("group")),
+    ] {
+        repository
+            .upsert_organization(UpsertOrganizationInput {
+                organization_code: code.to_string(),
+                organization_name: name.to_string(),
+                parent_organization_code: parent.map(|value| value.to_string()),
+                organization_status: "active".to_string(),
+                effective_from: None,
+                effective_to: None,
+            })
+            .await?;
+    }
+
+    repository
+        .upsert_workforce(UpsertWorkforceInput {
+            employee_number: "E7201".to_string(),
+            display_name: "조직구조".to_string(),
+            employment_status: "active".to_string(),
+            primary_organization_code: "part".to_string(),
+            job_family: None,
+            email: None,
+        })
+        .await?;
+
+    let snapshot = repository.get_organization_structure("team").await?;
+
+    assert_eq!(snapshot.organization_code, "team");
+    assert_eq!(snapshot.ancestors.len(), 1);
+    assert_eq!(snapshot.ancestors[0].organization_code, "division");
+    assert_eq!(snapshot.children.len(), 1);
+    assert_eq!(snapshot.children[0].organization_code, "group");
+    assert_eq!(snapshot.direct_member_count, 0);
+    assert_eq!(snapshot.subtree_organization_count, 3);
+    assert_eq!(snapshot.subtree_active_member_count, 1);
 
     Ok(())
 }

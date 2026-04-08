@@ -42,7 +42,9 @@ async fn applies_migrations_to_empty_postgres_database() -> anyhow::Result<()> {
             'work_item_hierarchy',
             'iteration',
             'work_item_plan_link',
-            'workforce_master'
+            'workforce_master',
+            'organization_change_log',
+            'workforce_change_log'
           )
         order by table_name
         "#,
@@ -56,11 +58,13 @@ async fn applies_migrations_to_empty_postgres_database() -> anyhow::Result<()> {
             "integration_job".to_string(),
             "integration_run".to_string(),
             "iteration".to_string(),
+            "organization_change_log".to_string(),
             "organization_master".to_string(),
             "project".to_string(),
             "raw_ingestion_event".to_string(),
             "work_item".to_string(),
             "work_item_hierarchy".to_string(),
+            "workforce_change_log".to_string(),
             "work_item_plan_link".to_string(),
             "work_item_status_history".to_string(),
             "work_item_type".to_string(),

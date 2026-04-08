@@ -63,13 +63,23 @@ Rust 백엔드 검증은 로컬 `PostgreSQL` 이 필요합니다. 기본 개발 
 
 테스트에서 임시 DB 생성 경로를 사용하므로 `ALM_BACKEND_TEST_DATABASE_ADMIN_URL` 은 `postgres` 데이터베이스를 가리켜야 합니다.
 
+## 운영 UI 프로토타입 실데이터 연결
+
+정적 운영 UI 프로토타입은 브라우저에서 바로 열 수 있고, `organization.html`, `admin.html` 은 실제 Rust 백엔드 API 와도 연결할 수 있습니다.
+
+- 정적 파일 서버 실행: `python3 -m http.server`
+- Rust 백엔드 실행: `cargo run --manifest-path backend/Cargo.toml`
+- 기본 API 기준 URL: `http://127.0.0.1:8080/api/v1`
+
+브라우저에서 `http://localhost:8000/src/ui_prototype/admin.html` 또는 `http://localhost:8000/src/ui_prototype/organization.html` 로 접속한 뒤, 화면 상단의 `API Base URL` 입력값을 조정하면 됩니다.
+
 ## 기술 스택 검토 상태
 
 - 프론트엔드 1차 검토안: `React`
 - 백엔드 1차 검토안: `Rust`
 - 현재 저장소의 백엔드 스캐폴딩은 `FastAPI + SQLAlchemy + Alembic` 기준의 임시 검증 골격이며, 최종 구현 스택 확정 전까지 구조 검토와 API 형태 확인 용도로만 사용합니다.
 - 실제 1차 구현 골격은 `backend/` 하위의 `axum + sqlx` 프로젝트를 기준으로 발전시킵니다.
-- 현재 `sync-runs` 운영 API 는 인메모리 stub 으로만 동작합니다.
+- `sync-runs`, `master-data`, `projects`, `work-items` 운영 API 는 Rust 백엔드 기준으로 구현되어 있으며, `db_pool` 이 없는 HTTP 테스트에서는 일부 경로가 인메모리 저장소 또는 `503` 응답으로 계약을 검증합니다.
 
 ## 참고
 

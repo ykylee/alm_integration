@@ -224,6 +224,128 @@ async fn master_data_organization_can_be_upserted_and_listed() {
 }
 
 #[tokio::test]
+async fn master_data_organization_can_be_updated_and_deleted() {
+    let app = build_router(AppState::new());
+
+    let create_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/admin/master-data/organizations")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"organization_code":"platform","organization_name":"Platform Center","organization_status":"active"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(create_response.status(), StatusCode::OK);
+
+    let update_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("PATCH")
+                .uri("/api/v1/admin/master-data/organizations/platform")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"organization_name":"Platform Group","organization_status":"active"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(update_response.status(), StatusCode::OK);
+
+    let body = axum::body::to_bytes(update_response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(json["organization_name"], "Platform Group");
+
+    let delete_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("DELETE")
+                .uri("/api/v1/admin/master-data/organizations/platform")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(delete_response.status(), StatusCode::NO_CONTENT);
+
+    let list_response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/admin/master-data/organizations?organization_status=deleted")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(list_response.status(), StatusCode::OK);
+
+    let body = axum::body::to_bytes(list_response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let items = json["items"].as_array().unwrap();
+
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0]["organization_code"], "platform");
+    assert_eq!(items[0]["organization_status"], "deleted");
+}
+
+#[tokio::test]
+async fn master_data_organization_rejects_hierarchy_cycle() {
+    let app = build_router(AppState::new());
+
+    for body in [
+        r#"{"organization_code":"platform","organization_name":"Platform","organization_status":"active"}"#,
+        r#"{"organization_code":"payments","organization_name":"Payments","organization_status":"active","parent_organization_code":"platform"}"#,
+    ] {
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/admin/master-data/organizations")
+                    .header("content-type", "application/json")
+                    .body(Body::from(body))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    let cycle_response = app
+        .oneshot(
+            Request::builder()
+                .method("PATCH")
+                .uri("/api/v1/admin/master-data/organizations/platform")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"organization_name":"Platform","organization_status":"active","parent_organization_code":"payments"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(cycle_response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
 async fn master_data_workforce_can_be_upserted_and_listed() {
     let app = build_router(AppState::new());
 
@@ -283,6 +405,254 @@ async fn master_data_workforce_can_be_upserted_and_listed() {
     assert_eq!(items[0]["employee_number"], "E1024");
     assert_eq!(items[0]["display_name"], "김운영");
     assert_eq!(items[0]["primary_organization_code"], "delivery");
+}
+
+#[tokio::test]
+async fn organization_members_can_be_managed_via_nested_routes() {
+    let app = build_router(AppState::new());
+
+    for body in [
+        r#"{"organization_code":"platform","organization_name":"Platform","organization_status":"active"}"#,
+        r#"{"organization_code":"payments","organization_name":"Payments","organization_status":"active","parent_organization_code":"platform"}"#,
+    ] {
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/admin/master-data/organizations")
+                    .header("content-type", "application/json")
+                    .body(Body::from(body))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    let create_member = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/admin/master-data/organizations/platform/members")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"employee_number":"E1001","display_name":"홍관리","employment_status":"active","job_family":"operations","email":"ops@example.com"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(create_member.status(), StatusCode::OK);
+
+    let update_member = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("PATCH")
+                .uri("/api/v1/admin/master-data/organizations/platform/members/E1001")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"display_name":"홍관리자","employment_status":"active","primary_organization_code":"payments","job_family":"platform_ops"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(update_member.status(), StatusCode::OK);
+
+    let list_members = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/admin/master-data/organizations/payments/members")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(list_members.status(), StatusCode::OK);
+
+    let body = axum::body::to_bytes(list_members.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let items = json["items"].as_array().unwrap();
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0]["display_name"], "홍관리자");
+    assert_eq!(items[0]["primary_organization_code"], "payments");
+
+    let delete_member = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("DELETE")
+                .uri("/api/v1/admin/master-data/organizations/payments/members/E1001")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(delete_member.status(), StatusCode::NO_CONTENT);
+
+    let list_inactive = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/admin/master-data/workforce?primary_organization_code=payments&employment_status=inactive")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(list_inactive.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn master_data_history_endpoints_return_organization_and_member_logs() {
+    let app = build_router(AppState::new());
+
+    let create_org = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/admin/master-data/organizations")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"organization_code":"platform","organization_name":"Platform Center","organization_status":"active"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(create_org.status(), StatusCode::OK);
+
+    let create_member = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/admin/master-data/organizations/platform/members")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"employee_number":"E5001","display_name":"윤이력","employment_status":"active","job_family":"ops","email":"history@example.com"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(create_member.status(), StatusCode::OK);
+
+    let organization_history = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/admin/master-data/organizations/platform/history")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(organization_history.status(), StatusCode::OK);
+
+    let organization_body = axum::body::to_bytes(organization_history.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let organization_json: serde_json::Value = serde_json::from_slice(&organization_body).unwrap();
+    assert!(!organization_json["items"].as_array().unwrap().is_empty());
+
+    let member_history = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/admin/master-data/organizations/platform/member-history")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(member_history.status(), StatusCode::OK);
+
+    let member_body = axum::body::to_bytes(member_history.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let member_json: serde_json::Value = serde_json::from_slice(&member_body).unwrap();
+    assert!(!member_json["items"].as_array().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn master_data_structure_endpoint_returns_ancestor_child_and_member_counts() {
+    let app = build_router(AppState::new());
+
+    for payload in [
+        r#"{"organization_code":"division","organization_name":"플랫폼사업부","organization_status":"active"}"#,
+        r#"{"organization_code":"team","organization_name":"통합플랫폼팀","parent_organization_code":"division","organization_status":"active"}"#,
+        r#"{"organization_code":"group","organization_name":"데이터허브그룹","parent_organization_code":"team","organization_status":"active"}"#,
+        r#"{"organization_code":"part","organization_name":"수집연계파트","parent_organization_code":"group","organization_status":"active"}"#,
+    ] {
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/admin/master-data/organizations")
+                    .header("content-type", "application/json")
+                    .body(Body::from(payload))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    for payload in [
+        r#"{"employee_number":"E7101","display_name":"한조직","employment_status":"active","job_family":"ops","email":"org1@example.com"}"#,
+        r#"{"employee_number":"E7102","display_name":"두조직","employment_status":"active","job_family":"ops","email":"org2@example.com"}"#,
+    ] {
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/admin/master-data/organizations/part/members")
+                    .header("content-type", "application/json")
+                    .body(Body::from(payload))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/admin/master-data/organizations/team/structure")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+    assert_eq!(json["item"]["organization_code"], "team");
+    assert_eq!(json["item"]["ancestors"].as_array().unwrap().len(), 1);
+    assert_eq!(json["item"]["children"].as_array().unwrap().len(), 1);
+    assert_eq!(json["item"]["direct_member_count"], 0);
+    assert_eq!(json["item"]["subtree_organization_count"], 3);
+    assert_eq!(json["item"]["subtree_active_member_count"], 2);
 }
 
 #[tokio::test]
@@ -406,4 +776,37 @@ async fn ingestion_event_rejects_invalid_hmac_signature() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn domain_read_api_requires_database_pool() {
+    let app = build_router(AppState::new());
+
+    let projects_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/admin/projects")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(projects_response.status(), StatusCode::SERVICE_UNAVAILABLE);
+
+    let work_items_response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/admin/work-items")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(
+        work_items_response.status(),
+        StatusCode::SERVICE_UNAVAILABLE
+    );
 }

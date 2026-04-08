@@ -4,7 +4,7 @@
 - 범위: `docs/overview/` 아래 문서
 - 대상 독자: 프로젝트 스폰서, 기획자, 개발자, 운영자, 아키텍트
 - 상태: draft
-- 최종 수정일: 2026-04-06
+- 최종 수정일: 2026-04-08
 - 관련 문서: `docs/README.md`, `docs/requirements/README.md`
 
 ## 이 카테고리에서 다루는 내용
@@ -26,6 +26,7 @@
 - 프로젝트 발표 목차: [project_presentation_outline.md](./project_presentation_outline.md)
 - UI/UX 프로토타입 설명: [ui_ux_prototype.md](./ui_ux_prototype.md)
 - 역할 기반 UX 구조 방향: [role_based_ux_direction.md](./role_based_ux_direction.md)
+- 통합 데이터 관리 UI 구조 방향: [integrated_data_management_ui_direction.md](./integrated_data_management_ui_direction.md)
 
 ## 다음에 읽을 문서
 

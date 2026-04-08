@@ -4,7 +4,7 @@
 - 범위: `docs/architecture/` 아래의 아키텍처 초안, 구성도, 데이터 흐름, 설계 계획 문서
 - 대상 독자: 아키텍트, 기획자, 개발자, 운영자
 - 상태: draft
-- 최종 수정일: 2026-04-07
+- 최종 수정일: 2026-04-08
 - 관련 문서: `docs/README.md`, `docs/requirements/system_srs.md`, `docs/overview/project_overview.md`
 
 ## 이 카테고리에서 다루는 내용
@@ -30,6 +30,7 @@
 - 시스템 통합 DB 동기화 실행 상태 전이 초안: [integration_run_state_transition_draft.md](./integration_run_state_transition_draft.md)
 - 시스템 통합 DB 워커 슬롯 및 실행 취소/롤백 정책 초안: [integration_worker_slot_and_cancellation_policy_draft.md](./integration_worker_slot_and_cancellation_policy_draft.md)
 - 시스템 서비스 분류 및 `MSA` 적용 판단 초안: [service_classification_and_msa_assessment_draft.md](./service_classification_and_msa_assessment_draft.md)
+- 통합 백엔드 구현 현황 요약: [current_backend_implementation_status_summary.md](./current_backend_implementation_status_summary.md)
 - 시스템 컨텍스트 및 연계 아키텍처 초안: [system_context_and_integration_draft.md](./system_context_and_integration_draft.md)
 - 핵심 도메인 모델 초안: [domain_model_draft.md](./domain_model_draft.md)
 - 핵심 엔터티 정의 초안: [domain_entity_definition_draft.md](./domain_entity_definition_draft.md)

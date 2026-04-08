@@ -22,6 +22,46 @@
         </aside>
         <main class="workspace">
           <div class="screen-header"><div><p class="eyebrow">Organization Operations</p><h2>조직 마스터, 인력 기준정보, 승인, 가용성</h2></div><div class="status-chip" id="page-role-chip">조직장 집중: Capacity & Approval</div></div>
+          <section class="panel emphasis">
+            <div class="panel-head">
+              <div>
+                <h3>조직 운영 API 연결</h3>
+                <span>Live Organization Binding</span>
+              </div>
+              <div class="status-chip" id="api-status-chip">연결 대기</div>
+            </div>
+            <div class="control-grid">
+              <label class="control-field">
+                <span>API Base URL</span>
+                <input
+                  class="control-input"
+                  id="api-base-url-input"
+                  name="api_base_url"
+                  type="text"
+                  value="http://127.0.0.1:8080/api/v1"
+                />
+              </label>
+              <label class="control-field">
+                <span>조직 코드 필터</span>
+                <input
+                  class="control-input"
+                  id="organization-filter-input"
+                  name="organization_code"
+                  type="text"
+                  value="platform"
+                />
+              </label>
+              <div class="control-actions">
+                <button class="control-button" id="api-refresh-button" type="button">새로고침</button>
+              </div>
+            </div>
+            <p class="status-copy" id="api-status-copy">조직 마스터, 인력 마스터, 프로젝트/업무 항목 참조를 실제 API로 확인합니다.</p>
+            <div class="metric-block" id="organization-live-metrics">
+              <div><span>대상 조직</span><strong>-</strong></div>
+              <div><span>소속 인력</span><strong>-</strong></div>
+              <div><span>연결 과제</span><strong>-</strong></div>
+            </div>
+          </section>
           <div class="detail-grid two-col">
             <section class="panel emphasis"><div class="panel-head"><h3 id="page-role-title">Capacity & Approval</h3><span id="page-role-kicker">Organization Focus</span></div><p class="panel-copy" id="page-role-summary">조직 수용 가능성, 승인 대기, 가용성 저하를 먼저 본다.</p><div class="bullet-stack" id="page-role-points"></div></section>
             <section class="panel"><div class="panel-head"><h3>조직 현황 요약</h3><span>Capacity</span></div><div class="metric-block"><div><span>활성 과제</span><strong>12</strong></div><div><span>핵심 인력 부재</span><strong>3</strong></div><div><span>조정 필요 과제</span><strong>4</strong></div></div></section>
@@ -32,8 +72,12 @@
             <section class="panel"><div class="panel-head"><h3>조직 변경 영향</h3><span>Impact</span></div><div class="bullet-stack"><div><strong>영향 과제</strong><p>활성 과제 12건</p></div><div><strong>승인 루트</strong><p>4건 재계산 필요</p></div><div><strong>프로젝트 조직 정보</strong><p>18건 갱신 후보</p></div></div></section>
           </div>
           <div class="detail-grid two-col">
-            <section class="panel"><div class="panel-head"><h3>조직 마스터</h3><span>Organization Master</span></div><table class="status-table"><tbody><tr><td>Platform Center</td><td>최상위 운영 조직</td><td class="ok">활성</td></tr><tr><td>Payments Team</td><td>상위: Platform Center</td><td class="ok">정상</td></tr><tr><td>QA Cell</td><td>상위: Delivery Division</td><td class="warn">개편 예정</td></tr></tbody></table></section>
-            <section class="panel"><div class="panel-head"><h3>인력 기준정보</h3><span>Workforce Master</span></div><div class="bullet-stack"><div><strong>활성 인력</strong><p>312명, 조직 기준정보와 동기화 완료</p></div><div><strong>보정 필요</strong><p>사번 누락 2건, 퇴직 상태 미반영 1건</p></div><div><strong>주 소속 변경</strong><p>이번 주 조직 이동 3건 검토 대기</p></div></div></section>
+            <section class="panel"><div class="panel-head"><h3>조직 마스터</h3><span>Organization Master</span></div><div class="table-scroll"><table class="status-table"><tbody id="organization-master-body"><tr><td colspan="3">불러오는 중</td></tr></tbody></table></div></section>
+            <section class="panel"><div class="panel-head"><h3>인력 기준정보</h3><span>Workforce Master</span></div><div class="bullet-stack" id="organization-workforce-summary"><div><strong>불러오는 중</strong><p>선택 조직의 인력 기준정보를 확인하고 있습니다.</p></div></div></section>
+          </div>
+          <div class="detail-grid two-col">
+            <section class="panel"><div class="panel-head"><h3>조직 소관 프로젝트</h3><span>Projects View</span></div><div class="table-scroll"><table class="status-table"><tbody id="organization-projects-body"><tr><td colspan="3">불러오는 중</td></tr></tbody></table></div></section>
+            <section class="panel"><div class="panel-head"><h3>조직 소관 업무 항목</h3><span>Work Items View</span></div><div class="table-scroll"><table class="status-table"><tbody id="organization-work-items-body"><tr><td colspan="3">불러오는 중</td></tr></tbody></table></div></section>
           </div>
           <div class="detail-grid two-col">
             <section class="panel"><div class="panel-head"><h3>공유 캘린더</h3><span>Calendar</span></div><div class="calendar-strip"><span class="event leave">휴가 2</span><span class="event trip">출장 1</span><span class="event review">집중 리뷰</span><span class="event edu">교육 1</span></div><p class="panel-copy">다음 주 리뷰 가능 인원 모수는 8명에서 6명으로 감소하며, 결제 과제 승인 일정 조정이 필요하다.</p></section>

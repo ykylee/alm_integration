@@ -1,3 +1,4 @@
+pub mod domain_read;
 pub mod identity_mapping;
 pub mod master_data;
 pub mod normalization;

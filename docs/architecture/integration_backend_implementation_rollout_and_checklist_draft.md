@@ -263,6 +263,9 @@
 - 2026-04-08 `organization`, `workforce` source object 를 표준화/매핑 대상에 포함했고, `pull` 오케스트레이터가 조직 마스터와 인력 마스터를 `organization -> workforce -> project -> work_item` 순서로 반영하도록 연결했다.
 - 2026-04-08 `ingestion/events` 수신 후에도 `push` 후처리 오케스트레이션이 실행되어 조직/인력 이벤트가 즉시 표준화, 마스터 반영, `push_completed` 상태 종료까지 이어지도록 연결했다.
 - 2026-04-08 `project.project_owner_workforce_id`, `work_item.owning_organization_id/assignee_workforce_id/reporter_workforce_id` 참조 컬럼을 추가했고, payload 의 조직 코드와 사번을 기준으로 실제 조직/인력 마스터 참조를 반영하도록 도메인 쓰기 서비스를 확장했다.
+- 2026-04-08 운영자가 `project/work_item` 와 연결된 조직/인력 책임 정보를 바로 조회할 수 있도록 `GET /api/v1/admin/projects`, `GET /api/v1/admin/work-items` 최소 조회 API 를 추가했다.
+- 2026-04-08 운영 UI 연결 전 점검 결과를 [current_backend_implementation_status_summary.md](./current_backend_implementation_status_summary.md) 에 정리했고, 운영 조회 API 는 DB 미연결 시 `200` 빈 목록 대신 `503 SERVICE_UNAVAILABLE` 를 반환하도록 보정했다.
+- 2026-04-08 `src/ui_prototype/admin.html`, `src/ui_prototype/organization.html` 이 실제 운영 API 를 조회하도록 연결했고, 화면 상단에서 API 기준 URL 과 조직 코드 필터를 조정할 수 있게 했다.
 - 2026-04-07 외부 시스템별 API 호출과 수신 payload 변환을 분리하기 위해 `pull`/`push` 어댑터 인터페이스와 `AdapterRegistry` 를 추가하고, `ingestion` 라우트와 `PullSyncOrchestrator` 가 이를 통해 시스템별 구현을 찾도록 연결했다.
 - 2026-04-07 `Jira`, `Bitbucket`, `Bamboo`, `Confluence` concrete adapter 를 추가하고, 공통 `reqwest` 전송 계층 위에서 시스템별 URL 조합과 응답/payload 파싱을 구현했다.
 - 2026-04-07 concrete adapter 단위 테스트와 레지스트리 기반 통합 테스트를 보강했고, 전체 `cargo test --manifest-path backend/Cargo.toml` 통과를 확인했다.

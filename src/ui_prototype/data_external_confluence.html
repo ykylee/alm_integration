@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Schubert Confluence Data Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body data-screen="data-external-confluence">
+    <div class="app-shell">
+      <header class="topbar data-topbar">
+        <div class="topbar-copy">
+          <p class="eyebrow">Integrated Data Admin</p>
+          <h1>`Confluence` 연결 데이터 관리</h1>
+          <p class="topbar-summary">문서와 페이지 수집 흐름을 시스템 단위로 점검하는 외부 소스 콘솔</p>
+        </div>
+        <div class="data-topbar-meta">
+          <div class="status-chip danger" id="page-role-chip">시스템 관리자 전용</div>
+          <div class="data-reference-note">
+            <strong>External Source Console</strong>
+            <p>연결 상태, 최근 실행, 대표 실행 상세, 후속 조치를 분리해 보여줍니다.</p>
+          </div>
+        </div>
+      </header>
+      <div class="layout">
+        <aside class="sidebar data-sidebar">
+          <div class="brand-block">
+            <p class="brand-name">EXTERNAL CONTROL</p>
+            <p class="brand-copy">시스템별 수집 실행 이력과 반영 상태를 추적하는 관리자 작업면</p>
+          </div>
+          <nav class="screen-nav" aria-label="외부 시스템 화면">
+            <a class="nav-item" data-screen="data-external-jira" href="./data_external_jira.html"><span class="nav-index">E1</span><span><strong>`Jira`</strong><small>이슈 · 프로젝트 연계</small></span></a>
+            <a class="nav-item" data-screen="data-external-bitbucket" href="./data_external_bitbucket.html"><span class="nav-index">E2</span><span><strong>`Bitbucket`</strong><small>저장소 · PR 연계</small></span></a>
+            <a class="nav-item" data-screen="data-external-bamboo" href="./data_external_bamboo.html"><span class="nav-index">E3</span><span><strong>`Bamboo`</strong><small>빌드 · 배포 연계</small></span></a>
+            <a class="nav-item" data-screen="data-external-confluence" href="./data_external_confluence.html"><span class="nav-index">E4</span><span><strong>`Confluence`</strong><small>문서 · 페이지 연계</small></span></a>
+            <a class="nav-item" data-screen="data-settings" href="./data_settings.html"><span class="nav-index">S1</span><span><strong>연결 설정</strong><small>관리자 API URL 관리</small></span></a>
+          </nav>
+        </aside>
+        <main class="workspace data-workspace">
+          <section class="data-command-deck">
+            <div class="data-command-copy">
+              <p class="eyebrow">External System</p>
+              <h2>`Confluence` 소스 콘솔</h2>
+              <p class="panel-copy" id="page-role-summary">`Confluence` 기준 수집 실행 이력과 현재 API 노출 범위를 시스템 단위로 분리해 관리합니다.</p>
+              <div class="bullet-stack compact-bullets" id="page-role-points"></div>
+            </div>
+            <div class="data-command-panel">
+              <div class="panel-head compact">
+                <div><h3 id="page-role-title">Confluence Source Control</h3><span id="page-role-kicker">Confluence Focus</span></div>
+                <div class="status-chip" id="api-status-chip">연결 대기</div>
+              </div>
+              <p class="status-copy" id="api-status-copy">`Confluence` 시스템 데이터를 불러옵니다.</p>
+            </div>
+          </section>
+          <section class="data-stat-strip">
+            <div class="metric-block data-metric-block" id="external-system-metrics">
+              <div><span>시스템</span><strong>`Confluence`</strong></div>
+              <div><span>실행 건수</span><strong>-</strong></div>
+              <div><span>최근 상태</span><strong>-</strong></div>
+            </div>
+          </section>
+          <section class="data-workbench two-pane">
+            <div class="data-column data-column-main">
+              <section class="panel data-panel"><div class="panel-head"><h3>최근 실행 이력</h3><span>Run Timeline</span></div><div class="bullet-stack" id="external-system-summary"><div><strong>불러오는 중</strong><p>최근 실행 이력을 확인합니다.</p></div></div></section>
+              <section class="panel data-panel"><div class="panel-head"><h3>대표 상세</h3><span>Selected Run</span></div><div class="bullet-stack" id="external-system-detail"><div><strong>불러오는 중</strong><p>대표 실행 건의 처리 상태를 계산합니다.</p></div></div></section>
+            </div>
+            <div class="data-column data-column-side">
+              <section class="panel data-panel"><div class="panel-head"><h3>현재 관리 범위</h3><span>Management Scope</span></div><div class="bullet-stack" id="external-system-scope"><div><strong>원시 적재</strong><p>현재 UI 에서는 시스템별 `sync-runs` 중심으로 노출합니다.</p></div><div><strong>향후 확장</strong><p>원시 이벤트, 표준화, 매핑, 오류 큐를 시스템별 화면에 추가합니다.</p></div></div></section>
+              <section class="panel data-panel"><div class="panel-head"><h3>운영 액션</h3><span>Checklist</span></div><div class="bullet-stack" id="external-system-actions"><div><strong>불러오는 중</strong><p>실행 상태 기반 후속 조치를 준비합니다.</p></div></div></section>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+    <script src="./app.js"></script>
+  </body>
+</html>
