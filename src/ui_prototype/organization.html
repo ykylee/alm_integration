@@ -4,7 +4,7 @@
   <body data-screen="organization">
     <div class="app-shell">
       <header class="topbar">
-        <div class="topbar-copy"><p class="eyebrow">Schubert Prototype</p><h1>조직 운영 상세 페이지</h1><p class="topbar-summary">조직장 기준 승인, 가용성, 인력 배치, 조직 변경 영향도를 실제 운영 판단에 맞게 펼친 페이지</p></div>
+        <div class="topbar-copy"><p class="eyebrow">Schubert Prototype</p><h1>조직 운영 상세 페이지</h1><p class="topbar-summary">조직 구조, 인력 기준정보, 승인과 가용성, 조직 변경 영향도를 한 흐름에서 다루는 운영 페이지</p></div>
         <div class="topbar-side"><div class="topbar-meta"><div><span>Phase 1 MVP</span><strong>2026-08</strong></div><div><span>Phase 2 Prototype</span><strong>2026-10</strong></div></div><div class="role-switcher" aria-label="역할 전환"><button class="role-chip" data-role="developer">개발자</button><button class="role-chip" data-role="project-lead">프로젝트리더</button><button class="role-chip" data-role="org-head">조직장</button><button class="role-chip" data-role="sys-admin">시스템 관리자</button><button class="role-chip" data-role="se">SE 담당자</button><button class="role-chip" data-role="qa">테스트 담당자</button></div></div>
       </header>
       <div class="layout">
@@ -21,7 +21,7 @@
           </nav>
         </aside>
         <main class="workspace">
-          <div class="screen-header"><div><p class="eyebrow">Organization Operations</p><h2>승인, 가용성, 인력 배치, 조직 영향</h2></div><div class="status-chip" id="page-role-chip">조직장 집중: Capacity & Approval</div></div>
+          <div class="screen-header"><div><p class="eyebrow">Organization Operations</p><h2>조직 마스터, 인력 기준정보, 승인, 가용성</h2></div><div class="status-chip" id="page-role-chip">조직장 집중: Capacity & Approval</div></div>
           <div class="detail-grid two-col">
             <section class="panel emphasis"><div class="panel-head"><h3 id="page-role-title">Capacity & Approval</h3><span id="page-role-kicker">Organization Focus</span></div><p class="panel-copy" id="page-role-summary">조직 수용 가능성, 승인 대기, 가용성 저하를 먼저 본다.</p><div class="bullet-stack" id="page-role-points"></div></section>
             <section class="panel"><div class="panel-head"><h3>조직 현황 요약</h3><span>Capacity</span></div><div class="metric-block"><div><span>활성 과제</span><strong>12</strong></div><div><span>핵심 인력 부재</span><strong>3</strong></div><div><span>조정 필요 과제</span><strong>4</strong></div></div></section>
@@ -32,8 +32,12 @@
             <section class="panel"><div class="panel-head"><h3>조직 변경 영향</h3><span>Impact</span></div><div class="bullet-stack"><div><strong>영향 과제</strong><p>활성 과제 12건</p></div><div><strong>승인 루트</strong><p>4건 재계산 필요</p></div><div><strong>프로젝트 조직 정보</strong><p>18건 갱신 후보</p></div></div></section>
           </div>
           <div class="detail-grid two-col">
+            <section class="panel"><div class="panel-head"><h3>조직 마스터</h3><span>Organization Master</span></div><table class="status-table"><tbody><tr><td>Platform Center</td><td>최상위 운영 조직</td><td class="ok">활성</td></tr><tr><td>Payments Team</td><td>상위: Platform Center</td><td class="ok">정상</td></tr><tr><td>QA Cell</td><td>상위: Delivery Division</td><td class="warn">개편 예정</td></tr></tbody></table></section>
+            <section class="panel"><div class="panel-head"><h3>인력 기준정보</h3><span>Workforce Master</span></div><div class="bullet-stack"><div><strong>활성 인력</strong><p>312명, 조직 기준정보와 동기화 완료</p></div><div><strong>보정 필요</strong><p>사번 누락 2건, 퇴직 상태 미반영 1건</p></div><div><strong>주 소속 변경</strong><p>이번 주 조직 이동 3건 검토 대기</p></div></div></section>
+          </div>
+          <div class="detail-grid two-col">
             <section class="panel"><div class="panel-head"><h3>공유 캘린더</h3><span>Calendar</span></div><div class="calendar-strip"><span class="event leave">휴가 2</span><span class="event trip">출장 1</span><span class="event review">집중 리뷰</span><span class="event edu">교육 1</span></div><p class="panel-copy">다음 주 리뷰 가능 인원 모수는 8명에서 6명으로 감소하며, 결제 과제 승인 일정 조정이 필요하다.</p></section>
-            <section class="panel"><div class="panel-head"><h3>과제 분포</h3><span>Portfolio Mix</span></div><table class="status-table"><tbody><tr><td>중요 과제</td><td>3건</td><td class="warn">집중</td></tr><tr><td>일반 과제</td><td>7건</td><td class="ok">정상</td></tr><tr><td>비관리 프로젝트</td><td>2건</td><td class="warn">전환 검토</td></tr></tbody></table></section>
+            <section class="panel"><div class="panel-head"><h3>과제 분포와 소속</h3><span>Portfolio Mix</span></div><table class="status-table"><tbody><tr><td>중요 과제</td><td>3건</td><td class="warn">집중</td></tr><tr><td>주 소속 변경 영향</td><td>승인 루트 4건</td><td class="warn">재계산</td></tr><tr><td>비관리 프로젝트</td><td>2건</td><td class="warn">전환 검토</td></tr></tbody></table></section>
           </div>
         </main>
       </div>

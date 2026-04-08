@@ -531,15 +531,53 @@ impl SyncRunRepository {
         success_count: i32,
         failure_count: i32,
     ) -> Result<SyncRunRecord, SyncRunRepositoryError> {
+        self.complete_run(
+            run_id,
+            processed_count,
+            success_count,
+            failure_count,
+            "pull_completed",
+            "pull_partially_completed",
+        )
+        .await
+    }
+
+    pub async fn complete_push_run(
+        &self,
+        run_id: &str,
+        processed_count: i32,
+        success_count: i32,
+        failure_count: i32,
+    ) -> Result<SyncRunRecord, SyncRunRepositoryError> {
+        self.complete_run(
+            run_id,
+            processed_count,
+            success_count,
+            failure_count,
+            "push_completed",
+            "push_partially_completed",
+        )
+        .await
+    }
+
+    async fn complete_run(
+        &self,
+        run_id: &str,
+        processed_count: i32,
+        success_count: i32,
+        failure_count: i32,
+        completed_reason_code: &str,
+        partial_reason_code: &str,
+    ) -> Result<SyncRunRecord, SyncRunRepositoryError> {
         let run_status = if failure_count > 0 {
             "partially_completed"
         } else {
             "completed"
         };
         let status_reason_code = if failure_count > 0 {
-            "pull_partially_completed"
+            partial_reason_code
         } else {
-            "pull_completed"
+            completed_reason_code
         };
         let ended_at = now();
 

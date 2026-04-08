@@ -4,7 +4,7 @@
 - 범위: 문서 리뷰 요약, 초기 구현 단계, 단계별 산출물, 개발 착수 체크리스트, 남은 보완 과제
 - 대상 독자: 백엔드 개발자, 아키텍트, `DBA`, 운영자, 기술 리드
 - 상태: draft
-- 최종 수정일: 2026-04-07
+- 최종 수정일: 2026-04-08
 - 관련 문서: `docs/architecture/integration_backend_design_plan.md`, `docs/architecture/integration_backend_component_draft.md`, `docs/architecture/integration_data_ingestion_sequence_draft.md`, `docs/architecture/integration_backend_api_and_batch_contract_draft.md`, `docs/architecture/integration_db_migration_and_seed_strategy_draft.md`
 
 ## 문서 위치
@@ -228,7 +228,7 @@
 ### 4.4 API/운영 준비
 
 - [x] `ingestion_api` 인증 방식 초안을 정했다.
-- [ ] 외부 시스템 연결 정보 등록/수정 UI 또는 관리자 API 경로를 정했다.
+- [x] 외부 시스템 연결 정보 등록/수정 UI 또는 관리자 API 경로를 정했다.
 - [x] 자격증명(`password`, `token`, `client secret`) 암호화 저장 방식을 정했다.
 - [ ] 화면/API/log 에서 민감정보 마스킹 규칙을 정했다.
 - [ ] 실행 취소 요청 시 `cancelled` 와 `partially_completed` 판정 기준을 팀 내에서 합의했다.
@@ -258,6 +258,11 @@
 - 2026-04-07 `integration_run` 저장 필드 확장 마이그레이션을 추가하고, `sync-runs` API가 `db_pool` 존재 시 `sqlx` 기반 `SyncRunRepository`를 사용하도록 연결했다.
 - 2026-04-07 `POST /api/v1/ingestion/events` 라우트와 `RawIngestionRepository`를 추가하고, 원시 적재/멱등 처리/잘못된 timestamp 검증 테스트를 반영했다.
 - 2026-04-07 `PullSyncOrchestrator` 를 추가해 수동 `pull` 실행이 하나의 `sync-run` 아래에서 `raw_ingestion_event` 로 적재되고, 성공/실패 건수에 따라 `completed` 또는 `partially_completed` 로 닫히는 경로를 테스트로 고정했다.
+- 2026-04-08 `organization_master` 확장과 `workforce_master` 최소 마이그레이션을 추가했고, `master-data` 관리자 API 로 조직/인력 기준정보의 목록 조회와 최소 등록/수정 경로를 열었다.
+- 2026-04-08 정적 운영 UI 프로토타입의 `organization`/`admin` 화면에 조직 마스터, 인력 기준정보, 연계 설정, `sync-runs` 운영 흐름을 반영했다.
+- 2026-04-08 `organization`, `workforce` source object 를 표준화/매핑 대상에 포함했고, `pull` 오케스트레이터가 조직 마스터와 인력 마스터를 `organization -> workforce -> project -> work_item` 순서로 반영하도록 연결했다.
+- 2026-04-08 `ingestion/events` 수신 후에도 `push` 후처리 오케스트레이션이 실행되어 조직/인력 이벤트가 즉시 표준화, 마스터 반영, `push_completed` 상태 종료까지 이어지도록 연결했다.
+- 2026-04-08 `project.project_owner_workforce_id`, `work_item.owning_organization_id/assignee_workforce_id/reporter_workforce_id` 참조 컬럼을 추가했고, payload 의 조직 코드와 사번을 기준으로 실제 조직/인력 마스터 참조를 반영하도록 도메인 쓰기 서비스를 확장했다.
 - 2026-04-07 외부 시스템별 API 호출과 수신 payload 변환을 분리하기 위해 `pull`/`push` 어댑터 인터페이스와 `AdapterRegistry` 를 추가하고, `ingestion` 라우트와 `PullSyncOrchestrator` 가 이를 통해 시스템별 구현을 찾도록 연결했다.
 - 2026-04-07 `Jira`, `Bitbucket`, `Bamboo`, `Confluence` concrete adapter 를 추가하고, 공통 `reqwest` 전송 계층 위에서 시스템별 URL 조합과 응답/payload 파싱을 구현했다.
 - 2026-04-07 concrete adapter 단위 테스트와 레지스트리 기반 통합 테스트를 보강했고, 전체 `cargo test --manifest-path backend/Cargo.toml` 통과를 확인했다.
@@ -271,6 +276,9 @@
 - 2026-04-07 `identity_mapping` 마이그레이션과 `IdentityMappingService` 를 추가해 표준화 결과와 함께 외부 식별자 `source_object_type:source_object_id` 를 내부 기준키에 매핑하도록 구현했다.
 - 2026-04-07 `ReferenceResolutionService` 를 추가해 `pending_reference` 이벤트를 `identity_mapping` 기준으로 재평가하고, 해소된 이벤트를 다시 `pending` 으로 승격한 뒤 같은 `pull` 실행 안에서 재표준화되도록 연결했다.
 - 2026-04-07 `organization_master`, `work_item_type`, `project`, `work_item` 최소 코어 테이블과 기본 시드를 추가했고, `ProjectWriteService`, `WorkItemWriteService` 를 통해 `pull` 실행 결과가 실제 도메인 테이블까지 반영되도록 연결했다.
+- 2026-04-08 `work_item_status_history` 최소 테이블을 추가했고, `WorkItemWriteService` 가 payload 상태를 `work_item.current_*` 와 최신 상태 이력에 함께 반영하도록 보강했다.
+- 2026-04-08 `work_item_hierarchy` 최소 테이블을 추가했고, `WorkItemWriteService` 가 payload 의 `parent_key` 를 읽어 단일 부모 기준 `work_item_hierarchy` 를 upsert 하도록 보강했다.
+- 2026-04-08 `iteration`, `work_item_plan_link` 최소 테이블을 추가했고, `WorkItemWriteService` 가 payload 의 `iteration_name` 을 읽어 계획 단위를 upsert 하고 `work_item_plan_link` 를 함께 반영하도록 보강했다.
 
 ## 5. 구현 착수 전 최종 게이트
 

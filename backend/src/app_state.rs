@@ -9,6 +9,7 @@ use crate::adapters::{
 use crate::security::ingestion_auth::{
     IngestionAuthRegistry, build_ingestion_auth_registry_from_endpoint_configs,
 };
+use crate::services::master_data::MasterDataStore;
 use crate::services::raw_ingestion::RawIngestionStore;
 use crate::services::sync_runs::SyncRunStore;
 
@@ -18,6 +19,7 @@ pub struct AppState {
     pub db_pool: Option<PgPool>,
     pub adapter_registry: AdapterRegistry,
     pub ingestion_auth_registry: IngestionAuthRegistry,
+    pub master_data_store: Arc<RwLock<MasterDataStore>>,
     pub raw_ingestion_store: Arc<RwLock<RawIngestionStore>>,
     pub sync_run_store: Arc<RwLock<SyncRunStore>>,
 }
@@ -32,6 +34,7 @@ impl AppState {
             ingestion_auth_registry: build_ingestion_auth_registry_from_endpoint_configs(
                 &endpoint_configs,
             ),
+            master_data_store: Arc::new(RwLock::new(MasterDataStore::default())),
             raw_ingestion_store: Arc::new(RwLock::new(RawIngestionStore::default())),
             sync_run_store: Arc::new(RwLock::new(SyncRunStore::default())),
         }
@@ -45,6 +48,7 @@ impl AppState {
             ingestion_auth_registry: build_ingestion_auth_registry_from_endpoint_configs(
                 &endpoint_configs,
             ),
+            master_data_store: Arc::new(RwLock::new(MasterDataStore::default())),
             raw_ingestion_store: Arc::new(RwLock::new(RawIngestionStore::default())),
             sync_run_store: Arc::new(RwLock::new(SyncRunStore::default())),
         }
@@ -56,6 +60,7 @@ impl AppState {
             db_pool: None,
             adapter_registry,
             ingestion_auth_registry: IngestionAuthRegistry::new(),
+            master_data_store: Arc::new(RwLock::new(MasterDataStore::default())),
             raw_ingestion_store: Arc::new(RwLock::new(RawIngestionStore::default())),
             sync_run_store: Arc::new(RwLock::new(SyncRunStore::default())),
         }
@@ -67,6 +72,7 @@ impl AppState {
             db_pool: Some(db_pool),
             adapter_registry,
             ingestion_auth_registry: IngestionAuthRegistry::new(),
+            master_data_store: Arc::new(RwLock::new(MasterDataStore::default())),
             raw_ingestion_store: Arc::new(RwLock::new(RawIngestionStore::default())),
             sync_run_store: Arc::new(RwLock::new(SyncRunStore::default())),
         }
@@ -78,6 +84,7 @@ impl AppState {
             db_pool: None,
             adapter_registry: build_default_registry(),
             ingestion_auth_registry,
+            master_data_store: Arc::new(RwLock::new(MasterDataStore::default())),
             raw_ingestion_store: Arc::new(RwLock::new(RawIngestionStore::default())),
             sync_run_store: Arc::new(RwLock::new(SyncRunStore::default())),
         }
@@ -92,6 +99,7 @@ impl AppState {
             db_pool: None,
             adapter_registry,
             ingestion_auth_registry,
+            master_data_store: Arc::new(RwLock::new(MasterDataStore::default())),
             raw_ingestion_store: Arc::new(RwLock::new(RawIngestionStore::default())),
             sync_run_store: Arc::new(RwLock::new(SyncRunStore::default())),
         }
@@ -107,6 +115,7 @@ impl AppState {
             db_pool: Some(db_pool),
             adapter_registry,
             ingestion_auth_registry,
+            master_data_store: Arc::new(RwLock::new(MasterDataStore::default())),
             raw_ingestion_store: Arc::new(RwLock::new(RawIngestionStore::default())),
             sync_run_store: Arc::new(RwLock::new(SyncRunStore::default())),
         }

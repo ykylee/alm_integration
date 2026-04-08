@@ -1,8 +1,12 @@
 pub mod identity_mapping;
+pub mod master_data;
 pub mod normalization;
+pub mod organization_write;
 pub mod project_write;
 pub mod pull_sync;
+pub mod push_ingestion;
 pub mod raw_ingestion;
 pub mod reference_resolution;
 pub mod sync_runs;
 pub mod work_item_write;
+pub mod workforce_write;

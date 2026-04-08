@@ -179,6 +179,113 @@ async fn sync_run_detail_returns_created_record() {
 }
 
 #[tokio::test]
+async fn master_data_organization_can_be_upserted_and_listed() {
+    let app = build_router(AppState::new());
+
+    let upsert_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/admin/master-data/organizations")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"organization_code":"platform","organization_name":"Platform Center","organization_status":"active","effective_from":"2026-04-08T00:00:00Z"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(upsert_response.status(), StatusCode::OK);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/admin/master-data/organizations?organization_status=active")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let items = json["items"].as_array().unwrap();
+
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0]["organization_code"], "platform");
+    assert_eq!(items[0]["organization_name"], "Platform Center");
+    assert_eq!(items[0]["organization_status"], "active");
+}
+
+#[tokio::test]
+async fn master_data_workforce_can_be_upserted_and_listed() {
+    let app = build_router(AppState::new());
+
+    let organization_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/admin/master-data/organizations")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"organization_code":"delivery","organization_name":"Delivery Division","organization_status":"active"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(organization_response.status(), StatusCode::OK);
+
+    let workforce_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/admin/master-data/workforce")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"employee_number":"E1024","display_name":"김운영","employment_status":"active","primary_organization_code":"delivery","job_family":"platform_engineering","email":"ops@example.com"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(workforce_response.status(), StatusCode::OK);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/admin/master-data/workforce?primary_organization_code=delivery")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let items = json["items"].as_array().unwrap();
+
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0]["employee_number"], "E1024");
+    assert_eq!(items[0]["display_name"], "김운영");
+    assert_eq!(items[0]["primary_organization_code"], "delivery");
+}
+
+#[tokio::test]
 async fn ingestion_event_can_be_accepted() {
     let app = build_router(AppState::with_ingestion_auth(IngestionAuthRegistry::new()));
 

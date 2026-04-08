@@ -235,6 +235,8 @@ fn map_target_entity_type(source_object_type: &str) -> &str {
     match source_object_type {
         "issue" => "work_item",
         "project" => "project",
+        "organization" => "organization",
+        "employee" | "workforce" => "workforce",
         other => other,
     }
 }

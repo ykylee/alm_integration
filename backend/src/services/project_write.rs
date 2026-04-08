@@ -76,10 +76,24 @@ impl ProjectWriteService {
                 .get("name")
                 .and_then(|value| value.as_str())
                 .unwrap_or(&project_code);
+            let owning_organization_code = payload
+                .get("owning_organization_code")
+                .or_else(|| payload.get("organization_code"))
+                .and_then(|value| value.as_str());
+            let project_owner_employee_number = payload
+                .get("project_owner_employee_number")
+                .or_else(|| payload.get("project_owner_id"))
+                .and_then(|value| value.as_str());
             let description = payload
                 .get("description")
                 .and_then(|value| value.as_str())
                 .map(ToString::to_string);
+            let owning_organization_id =
+                resolve_organization_id(&self.pool, owning_organization_code)
+                    .await?
+                    .unwrap_or(DEFAULT_ORGANIZATION_ID);
+            let project_owner_workforce_id =
+                resolve_workforce_id(&self.pool, project_owner_employee_number).await?;
             let now = Utc::now();
 
             sqlx::query(
@@ -91,13 +105,16 @@ impl ProjectWriteService {
                   project_type,
                   project_status,
                   owning_organization_id,
+                  project_owner_workforce_id,
                   description,
                   created_at,
                   updated_at
                 )
-                values ($1, $2, $3, 'delivery', 'active', $4, $5, $6, $6)
+                values ($1, $2, $3, 'delivery', 'active', $4, $5, $6, $7, $7)
                 on conflict (project_code)
                 do update set
+                  owning_organization_id = excluded.owning_organization_id,
+                  project_owner_workforce_id = excluded.project_owner_workforce_id,
                   project_name = excluded.project_name,
                   description = excluded.description,
                   updated_at = excluded.updated_at
@@ -106,7 +123,8 @@ impl ProjectWriteService {
             .bind(project_id)
             .bind(&project_code)
             .bind(project_name)
-            .bind(DEFAULT_ORGANIZATION_ID)
+            .bind(owning_organization_id)
+            .bind(project_owner_workforce_id)
             .bind(description)
             .bind(now)
             .execute(&self.pool)
@@ -117,5 +135,37 @@ impl ProjectWriteService {
             processed_count,
             written_count: processed_count,
         })
+    }
+}
+
+async fn resolve_organization_id(
+    pool: &PgPool,
+    organization_code: Option<&str>,
+) -> Result<Option<Uuid>, sqlx::Error> {
+    if let Some(organization_code) = organization_code {
+        sqlx::query_scalar::<_, Uuid>(
+            "select organization_id from organization_master where organization_code = $1",
+        )
+        .bind(organization_code)
+        .fetch_optional(pool)
+        .await
+    } else {
+        Ok(None)
+    }
+}
+
+async fn resolve_workforce_id(
+    pool: &PgPool,
+    employee_number: Option<&str>,
+) -> Result<Option<Uuid>, sqlx::Error> {
+    if let Some(employee_number) = employee_number {
+        sqlx::query_scalar::<_, Uuid>(
+            "select workforce_id from workforce_master where employee_number = $1",
+        )
+        .bind(employee_number)
+        .fetch_optional(pool)
+        .await
+    } else {
+        Ok(None)
     }
 }

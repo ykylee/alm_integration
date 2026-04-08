@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::adapters::{AdapterError, PushAdapterRequest};
 use crate::app_state::AppState;
 use crate::security::ingestion_auth::{IngestionAuthError, verify_ingestion_request};
+use crate::services::push_ingestion::{PushIngestionProcessor, PushIngestionProcessorError};
 use crate::services::raw_ingestion::{
     CreateRawIngestionEventInput, RawIngestionRepository, RawIngestionRepositoryError,
 };
@@ -92,6 +93,15 @@ async fn create_ingestion_event(
         store.create(input)
     };
 
+    if record.accepted {
+        if let Some(pool) = state.db_pool.clone() {
+            PushIngestionProcessor::new(pool)
+                .process_run(&record.run_id, 1)
+                .await
+                .map_err(map_push_processor_error)?;
+        }
+    }
+
     Ok((
         if record.accepted {
             StatusCode::ACCEPTED
@@ -142,5 +152,20 @@ fn map_ingestion_auth_error(error: IngestionAuthError) -> (StatusCode, &'static 
             (StatusCode::UNAUTHORIZED, "SIGNATURE_TIMESTAMP_EXPIRED")
         }
         IngestionAuthError::InvalidSignature => (StatusCode::UNAUTHORIZED, "INVALID_SIGNATURE"),
+    }
+}
+
+fn map_push_processor_error(error: PushIngestionProcessorError) -> (StatusCode, &'static str) {
+    match error {
+        PushIngestionProcessorError::Normalization(_)
+        | PushIngestionProcessorError::ReferenceResolution(_)
+        | PushIngestionProcessorError::OrganizationWrite(_)
+        | PushIngestionProcessorError::WorkforceWrite(_)
+        | PushIngestionProcessorError::ProjectWrite(_)
+        | PushIngestionProcessorError::WorkItemWrite(_)
+        | PushIngestionProcessorError::SyncRun(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "INGESTION_POST_PROCESSING_FAILED",
+        ),
     }
 }

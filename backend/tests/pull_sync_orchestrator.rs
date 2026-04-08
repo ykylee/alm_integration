@@ -167,23 +167,77 @@ async fn orchestrator_resolves_pending_reference_within_same_run() -> anyhow::Re
             reason: Some("reference resolution".to_string()),
             records: vec![
                 PullRecordInput {
+                    source_object_type: "organization".to_string(),
+                    source_object_id: "platform".to_string(),
+                    source_event_key: "jira-org-platform".to_string(),
+                    source_version: Some("1".to_string()),
+                    source_updated_at: Some("2026-04-07T08:55:00Z".to_string()),
+                    payload: serde_json::json!({
+                        "organization_name": "Platform Center",
+                        "organization_status": "active"
+                    }),
+                },
+                PullRecordInput {
+                    source_object_type: "workforce".to_string(),
+                    source_object_id: "E9001".to_string(),
+                    source_event_key: "jira-workforce-e9001".to_string(),
+                    source_version: Some("1".to_string()),
+                    source_updated_at: Some("2026-04-07T08:56:00Z".to_string()),
+                    payload: serde_json::json!({
+                        "display_name": "박연계",
+                        "employment_status": "active",
+                        "primary_organization_code": "platform"
+                    }),
+                },
+                PullRecordInput {
                     source_object_type: "project".to_string(),
                     source_object_id: "OPS".to_string(),
                     source_event_key: "jira-project-ops".to_string(),
                     source_version: Some("1".to_string()),
                     source_updated_at: Some("2026-04-07T09:00:00Z".to_string()),
-                    payload: serde_json::json!({"name": "Operations"}),
+                    payload: serde_json::json!({
+                        "name": "Operations",
+                        "owning_organization_code": "platform",
+                        "project_owner_employee_number": "E9001"
+                    }),
+                },
+                PullRecordInput {
+                    source_object_type: "issue".to_string(),
+                    source_object_id: "OPS-100".to_string(),
+                    source_event_key: "jira-issue-ops-100".to_string(),
+                    source_version: Some("2".to_string()),
+                    source_updated_at: Some("2026-04-07T09:04:00Z".to_string()),
+                    payload: serde_json::json!({
+                        "summary": "Parent task",
+                        "project_key": "OPS",
+                        "owning_organization_code": "platform",
+                        "assignee_employee_number": "E9001",
+                        "reporter_employee_number": "E9001",
+                        "status": {
+                            "common": "open",
+                            "detailed": "new"
+                        }
+                    }),
                 },
                 PullRecordInput {
                     source_object_type: "issue".to_string(),
                     source_object_id: "OPS-101".to_string(),
                     source_event_key: "jira-issue-ops-101".to_string(),
-                    source_version: Some("2".to_string()),
+                    source_version: Some("3".to_string()),
                     source_updated_at: Some("2026-04-07T09:05:00Z".to_string()),
                     payload: serde_json::json!({
                         "summary": "Child task after parent",
+                        "parent_key": "OPS-100",
+                        "iteration_name": "Sprint 1",
+                        "owning_organization_code": "platform",
+                        "assignee_employee_number": "E9001",
+                        "reporter_employee_number": "E9001",
                         "references": {
                             "missing": ["project:OPS"]
+                        },
+                        "status": {
+                            "common": "in_progress",
+                            "detailed": "doing"
                         }
                     }),
                 },
@@ -192,7 +246,7 @@ async fn orchestrator_resolves_pending_reference_within_same_run() -> anyhow::Re
         .await?;
 
     assert_eq!(result.run_status, "completed");
-    assert_eq!(result.success_count, 2);
+    assert_eq!(result.success_count, 5);
 
     let statuses = sqlx::query(
         r#"
@@ -215,8 +269,11 @@ async fn orchestrator_resolves_pending_reference_within_same_run() -> anyhow::Re
     assert_eq!(
         normalized_statuses,
         vec![
+            ("E9001".to_string(), "normalized".to_string()),
             ("OPS".to_string(), "normalized".to_string()),
+            ("OPS-100".to_string(), "normalized".to_string()),
             ("OPS-101".to_string(), "normalized".to_string()),
+            ("platform".to_string(), "normalized".to_string()),
         ]
     );
 
@@ -233,23 +290,189 @@ async fn orchestrator_resolves_pending_reference_within_same_run() -> anyhow::Re
     .fetch_one(&pool)
     .await?;
 
-    assert_eq!(normalized_count, 2);
+    assert_eq!(normalized_count, 5);
 
     let domain_counts = sqlx::query(
         r#"
         select
+          (select count(*) from organization_master where organization_code in ('default_org', 'platform')) as organization_count,
+          (select count(*) from workforce_master where employee_number = 'E9001') as workforce_count,
           (select count(*) from project where project_code = 'OPS') as project_count,
-          (select count(*) from work_item where work_item_key = 'OPS-101') as work_item_count
+          (select count(*) from work_item where work_item_key in ('OPS-100', 'OPS-101')) as work_item_count
         "#,
     )
     .fetch_one(&pool)
     .await?;
 
+    let organization_count: i64 = domain_counts.get("organization_count");
+    let workforce_count: i64 = domain_counts.get("workforce_count");
     let project_count: i64 = domain_counts.get("project_count");
     let work_item_count: i64 = domain_counts.get("work_item_count");
 
+    assert_eq!(organization_count, 2);
+    assert_eq!(workforce_count, 1);
     assert_eq!(project_count, 1);
-    assert_eq!(work_item_count, 1);
+    assert_eq!(work_item_count, 2);
+
+    let history_count: i64 = sqlx::query_scalar(
+        r#"
+        select count(*)
+        from work_item_status_history h
+        join work_item w on w.work_item_id = h.work_item_id
+        where w.work_item_key in ('OPS-100', 'OPS-101')
+        "#,
+    )
+    .fetch_one(&pool)
+    .await?;
+
+    assert_eq!(history_count, 2);
+
+    let hierarchy_count: i64 = sqlx::query_scalar(
+        r#"
+        select count(*)
+        from work_item_hierarchy h
+        join work_item child on child.work_item_id = h.child_work_item_id
+        join work_item parent on parent.work_item_id = h.parent_work_item_id
+        where parent.work_item_key = 'OPS-100'
+          and child.work_item_key = 'OPS-101'
+        "#,
+    )
+    .fetch_one(&pool)
+    .await?;
+
+    assert_eq!(hierarchy_count, 1);
+
+    let plan_link_count: i64 = sqlx::query_scalar(
+        r#"
+        select count(*)
+        from work_item_plan_link l
+        join work_item w on w.work_item_id = l.work_item_id
+        join iteration i on i.iteration_id = l.plan_id
+        where w.work_item_key = 'OPS-101'
+          and l.plan_type = 'iteration'
+          and i.name = 'Sprint 1'
+        "#,
+    )
+    .fetch_one(&pool)
+    .await?;
+
+    assert_eq!(plan_link_count, 1);
+
+    let project_master_ref_row = sqlx::query(
+        r#"
+        select
+          om.organization_code as owning_organization_code,
+          wm.employee_number as project_owner_employee_number
+        from project p
+        left join organization_master om on om.organization_id = p.owning_organization_id
+        left join workforce_master wm on wm.workforce_id = p.project_owner_workforce_id
+        where p.project_code = 'OPS'
+        "#,
+    )
+    .fetch_one(&pool)
+    .await?;
+
+    let project_owning_organization_code: String =
+        project_master_ref_row.get("owning_organization_code");
+    let project_owner_employee_number: String =
+        project_master_ref_row.get("project_owner_employee_number");
+
+    assert_eq!(project_owning_organization_code, "platform");
+    assert_eq!(project_owner_employee_number, "E9001");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn orchestrator_applies_organization_and_workforce_master_data() -> anyhow::Result<()> {
+    let Some(test_db) = TestDatabase::create().await? else {
+        eprintln!(
+            "skip orchestrator_applies_organization_and_workforce_master_data: ALM_BACKEND_TEST_DATABASE_ADMIN_URL not set"
+        );
+        return Ok(());
+    };
+
+    let pool = connect_and_migrate(&test_db).await?;
+    let orchestrator = PullSyncOrchestrator::new(pool.clone());
+
+    let result = orchestrator
+        .run(PullSyncRunInput {
+            source_system: "hr".to_string(),
+            mode: "incremental".to_string(),
+            scope: serde_json::json!({"organizations": ["platform"]}),
+            reason: Some("master data sync".to_string()),
+            records: vec![
+                PullRecordInput {
+                    source_object_type: "organization".to_string(),
+                    source_object_id: "platform".to_string(),
+                    source_event_key: "hr-org-platform".to_string(),
+                    source_version: Some("1".to_string()),
+                    source_updated_at: Some("2026-04-08T01:00:00Z".to_string()),
+                    payload: serde_json::json!({
+                        "organization_name": "Platform Center",
+                        "organization_status": "active"
+                    }),
+                },
+                PullRecordInput {
+                    source_object_type: "workforce".to_string(),
+                    source_object_id: "E9001".to_string(),
+                    source_event_key: "hr-workforce-e9001".to_string(),
+                    source_version: Some("2".to_string()),
+                    source_updated_at: Some("2026-04-08T01:05:00Z".to_string()),
+                    payload: serde_json::json!({
+                        "display_name": "박연계",
+                        "employment_status": "active",
+                        "primary_organization_code": "platform",
+                        "job_family": "integration_engineering",
+                        "email": "integration@example.com"
+                    }),
+                },
+            ],
+        })
+        .await?;
+
+    assert_eq!(result.run_status, "completed");
+    assert_eq!(result.success_count, 2);
+
+    let organization_row = sqlx::query(
+        r#"
+        select organization_name, organization_status
+        from organization_master
+        where organization_code = $1
+        "#,
+    )
+    .bind("platform")
+    .fetch_one(&pool)
+    .await?;
+
+    let organization_name: String = organization_row.get("organization_name");
+    let organization_status: String = organization_row.get("organization_status");
+
+    assert_eq!(organization_name, "Platform Center");
+    assert_eq!(organization_status, "active");
+
+    let workforce_row = sqlx::query(
+        r#"
+        select
+          wm.employee_number,
+          wm.display_name,
+          om.organization_code as primary_organization_code
+        from workforce_master wm
+        join organization_master om on om.organization_id = wm.primary_organization_id
+        where wm.employee_number = $1
+        "#,
+    )
+    .bind("E9001")
+    .fetch_one(&pool)
+    .await?;
+
+    let employee_number: String = workforce_row.get("employee_number");
+    let display_name: String = workforce_row.get("display_name");
+    let primary_organization_code: String = workforce_row.get("primary_organization_code");
+
+    assert_eq!(employee_number, "E9001");
+    assert_eq!(display_name, "박연계");
+    assert_eq!(primary_organization_code, "platform");
 
     Ok(())
 }

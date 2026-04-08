@@ -37,7 +37,12 @@ async fn applies_migrations_to_empty_postgres_database() -> anyhow::Result<()> {
             'organization_master',
             'project',
             'work_item',
-            'work_item_type'
+            'work_item_type',
+            'work_item_status_history',
+            'work_item_hierarchy',
+            'iteration',
+            'work_item_plan_link',
+            'workforce_master'
           )
         order by table_name
         "#,
@@ -50,11 +55,16 @@ async fn applies_migrations_to_empty_postgres_database() -> anyhow::Result<()> {
         vec![
             "integration_job".to_string(),
             "integration_run".to_string(),
+            "iteration".to_string(),
             "organization_master".to_string(),
             "project".to_string(),
             "raw_ingestion_event".to_string(),
             "work_item".to_string(),
-            "work_item_type".to_string()
+            "work_item_hierarchy".to_string(),
+            "work_item_plan_link".to_string(),
+            "work_item_status_history".to_string(),
+            "work_item_type".to_string(),
+            "workforce_master".to_string()
         ]
     );
 

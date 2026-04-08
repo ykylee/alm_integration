@@ -29,6 +29,7 @@
 - 시스템 통합 DB 인증 및 서명 정책 초안: [integration_auth_and_signing_policy_draft.md](./integration_auth_and_signing_policy_draft.md)
 - 시스템 통합 DB 동기화 실행 상태 전이 초안: [integration_run_state_transition_draft.md](./integration_run_state_transition_draft.md)
 - 시스템 통합 DB 워커 슬롯 및 실행 취소/롤백 정책 초안: [integration_worker_slot_and_cancellation_policy_draft.md](./integration_worker_slot_and_cancellation_policy_draft.md)
+- 시스템 서비스 분류 및 `MSA` 적용 판단 초안: [service_classification_and_msa_assessment_draft.md](./service_classification_and_msa_assessment_draft.md)
 - 시스템 컨텍스트 및 연계 아키텍처 초안: [system_context_and_integration_draft.md](./system_context_and_integration_draft.md)
 - 핵심 도메인 모델 초안: [domain_model_draft.md](./domain_model_draft.md)
 - 핵심 엔터티 정의 초안: [domain_entity_definition_draft.md](./domain_entity_definition_draft.md)

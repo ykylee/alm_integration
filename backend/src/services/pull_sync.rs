@@ -3,6 +3,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::services::normalization::{NormalizationPipeline, NormalizationPipelineError};
+use crate::services::organization_write::{OrganizationWriteError, OrganizationWriteService};
 use crate::services::project_write::{ProjectWriteError, ProjectWriteService};
 use crate::services::raw_ingestion::{
     CreateRawIngestionEventInput, RawIngestionRepository, RawIngestionRepositoryError,
@@ -12,6 +13,7 @@ use crate::services::sync_runs::{
     CreateSyncRunInput, SyncRunRecord, SyncRunRepository, SyncRunRepositoryError,
 };
 use crate::services::work_item_write::{WorkItemWriteError, WorkItemWriteService};
+use crate::services::workforce_write::{WorkforceWriteError, WorkforceWriteService};
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -41,6 +43,8 @@ pub enum PullSyncOrchestratorError {
     RawIngestion(RawIngestionRepositoryError),
     Normalization(NormalizationPipelineError),
     ReferenceResolution(ReferenceResolutionError),
+    OrganizationWrite(OrganizationWriteError),
+    WorkforceWrite(WorkforceWriteError),
     ProjectWrite(ProjectWriteError),
     WorkItemWrite(WorkItemWriteError),
     Adapter(AdapterError),
@@ -53,6 +57,8 @@ impl std::fmt::Display for PullSyncOrchestratorError {
             Self::RawIngestion(error) => write!(f, "raw ingestion error: {error}"),
             Self::Normalization(error) => write!(f, "normalization error: {error}"),
             Self::ReferenceResolution(error) => write!(f, "reference resolution error: {error}"),
+            Self::OrganizationWrite(error) => write!(f, "organization write error: {error}"),
+            Self::WorkforceWrite(error) => write!(f, "workforce write error: {error}"),
             Self::ProjectWrite(error) => write!(f, "project write error: {error}"),
             Self::WorkItemWrite(error) => write!(f, "work item write error: {error}"),
             Self::Adapter(error) => write!(f, "adapter error: {error}"),
@@ -92,6 +98,18 @@ impl From<ProjectWriteError> for PullSyncOrchestratorError {
     }
 }
 
+impl From<OrganizationWriteError> for PullSyncOrchestratorError {
+    fn from(error: OrganizationWriteError) -> Self {
+        Self::OrganizationWrite(error)
+    }
+}
+
+impl From<WorkforceWriteError> for PullSyncOrchestratorError {
+    fn from(error: WorkforceWriteError) -> Self {
+        Self::WorkforceWrite(error)
+    }
+}
+
 impl From<WorkItemWriteError> for PullSyncOrchestratorError {
     fn from(error: WorkItemWriteError) -> Self {
         Self::WorkItemWrite(error)
@@ -111,6 +129,8 @@ pub struct PullSyncOrchestrator {
     raw_ingestion_repository: RawIngestionRepository,
     normalization_pipeline: NormalizationPipeline,
     reference_resolution_service: ReferenceResolutionService,
+    organization_write_service: OrganizationWriteService,
+    workforce_write_service: WorkforceWriteService,
     project_write_service: ProjectWriteService,
     work_item_write_service: WorkItemWriteService,
 }
@@ -123,6 +143,8 @@ impl PullSyncOrchestrator {
             sync_run_repository: SyncRunRepository::new(pool.clone()),
             normalization_pipeline: NormalizationPipeline::new(pool.clone()),
             reference_resolution_service: ReferenceResolutionService::new(pool.clone()),
+            organization_write_service: OrganizationWriteService::new(pool.clone()),
+            workforce_write_service: WorkforceWriteService::new(pool.clone()),
             project_write_service: ProjectWriteService::new(pool.clone()),
             work_item_write_service: WorkItemWriteService::new(pool.clone()),
             raw_ingestion_repository: RawIngestionRepository::new(pool),
@@ -196,6 +218,12 @@ impl PullSyncOrchestrator {
         .await
         .map_err(SyncRunRepositoryError::Database)?;
 
+        self.organization_write_service
+            .apply_for_run(run_internal_id)
+            .await?;
+        self.workforce_write_service
+            .apply_for_run(run_internal_id)
+            .await?;
         self.project_write_service
             .apply_for_run(run_internal_id)
             .await?;

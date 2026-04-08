@@ -150,6 +150,123 @@ async fn pull_orchestrator_uses_registered_pull_adapter() -> anyhow::Result<()> 
     Ok(())
 }
 
+#[tokio::test]
+async fn ingestion_route_applies_master_data_for_push_events() -> anyhow::Result<()> {
+    let Some(test_db) = TestDatabase::create().await? else {
+        eprintln!(
+            "skip ingestion_route_applies_master_data_for_push_events: ALM_BACKEND_TEST_DATABASE_ADMIN_URL not set"
+        );
+        return Ok(());
+    };
+
+    let pool = connect_and_migrate(&test_db).await?;
+    let app = build_router(AppState::with_pool(pool.clone()));
+
+    let organization_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/ingestion/events")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"source_system":"hr","source_object_type":"organization","source_object_id":"platform","source_event_key":"hr-org-platform","source_version":"1","source_updated_at":"2026-04-08T01:00:00Z","payload":{"organization_name":"Platform Center","organization_status":"active"}}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(organization_response.status(), StatusCode::ACCEPTED);
+
+    let workforce_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/ingestion/events")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"source_system":"hr","source_object_type":"workforce","source_object_id":"E9001","source_event_key":"hr-workforce-e9001","source_version":"2","source_updated_at":"2026-04-08T01:05:00Z","payload":{"display_name":"박연계","employment_status":"active","primary_organization_code":"platform","job_family":"integration_engineering","email":"integration@example.com"}}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(workforce_response.status(), StatusCode::ACCEPTED);
+
+    let organization_row = sqlx::query(
+        r#"
+        select organization_name, organization_status
+        from organization_master
+        where organization_code = $1
+        "#,
+    )
+    .bind("platform")
+    .fetch_one(&pool)
+    .await?;
+
+    let organization_name: String = organization_row.get("organization_name");
+    let organization_status: String = organization_row.get("organization_status");
+
+    assert_eq!(organization_name, "Platform Center");
+    assert_eq!(organization_status, "active");
+
+    let workforce_row = sqlx::query(
+        r#"
+        select
+          wm.employee_number,
+          wm.display_name,
+          om.organization_code as primary_organization_code
+        from workforce_master wm
+        join organization_master om on om.organization_id = wm.primary_organization_id
+        where wm.employee_number = $1
+        "#,
+    )
+    .bind("E9001")
+    .fetch_one(&pool)
+    .await?;
+
+    let employee_number: String = workforce_row.get("employee_number");
+    let display_name: String = workforce_row.get("display_name");
+    let primary_organization_code: String = workforce_row.get("primary_organization_code");
+
+    assert_eq!(employee_number, "E9001");
+    assert_eq!(display_name, "박연계");
+    assert_eq!(primary_organization_code, "platform");
+
+    let run_statuses = sqlx::query(
+        r#"
+        select external_run_id, run_status, status_reason_code
+        from integration_run
+        where source_system = 'hr'
+        order by queued_at asc
+        "#,
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    let statuses: Vec<(String, String, String)> = run_statuses
+        .into_iter()
+        .map(|row| {
+            (
+                row.get("external_run_id"),
+                row.get("run_status"),
+                row.get("status_reason_code"),
+            )
+        })
+        .collect();
+
+    assert_eq!(statuses.len(), 2);
+    assert_eq!(statuses[0].1, "completed");
+    assert_eq!(statuses[0].2, "push_completed");
+    assert_eq!(statuses[1].1, "completed");
+    assert_eq!(statuses[1].2, "push_completed");
+
+    Ok(())
+}
+
 async fn connect_and_migrate(test_db: &TestDatabase) -> anyhow::Result<PgPool> {
     let settings = Settings {
         bind_address: "127.0.0.1:8080".to_string(),
