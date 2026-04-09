@@ -737,10 +737,19 @@ const PROTOTYPE_API_BASE_KEY = "prototypeApiBaseUrl";
 const PROTOTYPE_SELECTED_ORGANIZATION_KEY = "prototypeSelectedOrganizationCode";
 const PROTOTYPE_SELECTED_BUSINESS_UNIT_KEY = "prototypeSelectedBusinessUnitCode";
 const PROTOTYPE_ORGANIZATION_WORKBENCH_TAB_KEY = "prototypeOrganizationWorkbenchTab";
-const DEFAULT_API_BASE_URL = "http://127.0.0.1:8080/api/v1";
+const DEFAULT_API_BASE_URL = "http://127.0.0.1:28080/api/v1";
+const LEGACY_API_BASE_URLS = new Set([
+  "http://127.0.0.1:8080/api/v1",
+  "http://localhost:8080/api/v1",
+]);
 const organizationAdminState = {
   organizations: [],
   workforce: [],
+};
+const organizationTreeViewportState = {
+  rootCode: "",
+  scrollLeft: 0,
+  scrollTop: 0,
 };
 const organizationTreeUiState = {
   draftParentCode: "",
@@ -778,7 +787,12 @@ function getQueryApiBaseUrl() {
 }
 
 function getStoredApiBaseUrl() {
-  return localStorage.getItem(PROTOTYPE_API_BASE_KEY) || "";
+  const value = localStorage.getItem(PROTOTYPE_API_BASE_KEY) || "";
+  if (LEGACY_API_BASE_URLS.has(value)) {
+    localStorage.setItem(PROTOTYPE_API_BASE_KEY, DEFAULT_API_BASE_URL);
+    return DEFAULT_API_BASE_URL;
+  }
+  return value;
 }
 
 function resolveApiBaseUrl() {
@@ -1867,11 +1881,11 @@ function renderBusinessUnitTabs(organizations, workforceItems) {
 
       return `<button class="org-division-tab${
         selectedBusinessUnitCode === item.organization_code ? " active" : ""
-      }" type="button" data-business-unit-code="${escapeHtml(item.organization_code)}"><strong>${escapeHtml(
+      }" type="button" data-business-unit-code="${escapeHtml(item.organization_code)}"><span class="org-division-tab-label">${escapeHtml(
         item.organization_name,
-      )}</strong><small>${escapeHtml(item.organization_code)} · 하위 ${escapeHtml(
+      )}</span><span class="org-division-tab-meta">하위 ${escapeHtml(
         String(Math.max(subtreeCodes.length - 1, 0)),
-      )}개 조직 · ${escapeHtml(String(activeMembers))}명</small></button>`;
+      )}개 조직 · ${escapeHtml(String(activeMembers))}명</span></button>`;
     })
     .join("");
 }
@@ -1880,13 +1894,25 @@ function renderOrganizationPyramidTree(targetId, organizations, workforceItems, 
   const target = document.getElementById(targetId);
   if (!target) return;
 
+  const shouldPreserveScroll = organizationTreeViewportState.rootCode === rootCode;
+  if (shouldPreserveScroll) {
+    organizationTreeViewportState.scrollLeft = target.scrollLeft;
+    organizationTreeViewportState.scrollTop = target.scrollTop;
+  } else {
+    organizationTreeViewportState.rootCode = rootCode || "";
+    organizationTreeViewportState.scrollLeft = 0;
+    organizationTreeViewportState.scrollTop = 0;
+  }
+
   if (!organizations.length || !rootCode) {
+    organizationTreeViewportState.rootCode = "";
     target.innerHTML = `<div class="empty-state">표시할 조직 트리가 없습니다.</div>`;
     return;
   }
 
   const root = getOrganizationByCode(organizations, rootCode);
   if (!root) {
+    organizationTreeViewportState.rootCode = "";
     target.innerHTML = `<div class="empty-state">선택한 사업부 트리를 만들 수 없습니다.</div>`;
     return;
   }
@@ -1913,27 +1939,36 @@ function renderOrganizationPyramidTree(targetId, organizations, workforceItems, 
     memberCountByOrganization,
     scopedOrganizations,
   )}</div>`;
-  softenOrganizationPyramidMargins(target);
+  softenOrganizationPyramidMargins(target, {
+    preserveScroll: shouldPreserveScroll,
+    scrollLeft: organizationTreeViewportState.scrollLeft,
+    scrollTop: organizationTreeViewportState.scrollTop,
+  });
 }
 
-function softenOrganizationPyramidMargins(target) {
+function softenOrganizationPyramidMargins(target, options = {}) {
   const panel = target;
   const tree = panel?.querySelector(".org-pyramid-tree");
   if (!panel || !tree) return;
 
-  tree.style.setProperty("--org-pyramid-shift-x", "0px");
-  const cards = [...panel.querySelectorAll(".org-pyramid-card")];
-  if (!cards.length) return;
+  tree.style.minWidth = "0";
+  tree.style.marginInline = "0";
+  tree.style.justifyContent = "flex-start";
 
-  const panelRect = panel.getBoundingClientRect();
-  const leftMost = Math.min(...cards.map((card) => card.getBoundingClientRect().left));
-  const rightMost = Math.max(...cards.map((card) => card.getBoundingClientRect().right));
-  const leftGap = leftMost - panelRect.left;
-  const rightGap = panelRect.right - rightMost;
-  const delta = Math.round((leftGap - rightGap) / 4);
+  // When the whole tree fits in the panel, keep the previous centered look.
+  if (panel.scrollWidth <= panel.clientWidth + 4) {
+    tree.style.minWidth = "max(100%, 964px)";
+    tree.style.marginInline = "auto";
+    tree.style.justifyContent = "center";
+  }
 
-  if (Math.abs(delta) < 2) return;
-  tree.style.setProperty("--org-pyramid-shift-x", `${-delta}px`);
+  const maxScrollLeft = Math.max(panel.scrollWidth - panel.clientWidth, 0);
+  const maxScrollTop = Math.max(panel.scrollHeight - panel.clientHeight, 0);
+  panel.scrollLeft = options.preserveScroll ? Math.min(options.scrollLeft || 0, maxScrollLeft) : 0;
+  panel.scrollTop = options.preserveScroll ? Math.min(options.scrollTop || 0, maxScrollTop) : 0;
+
+  organizationTreeViewportState.scrollLeft = panel.scrollLeft;
+  organizationTreeViewportState.scrollTop = panel.scrollTop;
 }
 
 const ORG_PYRAMID_CARD_WIDTH = 204;

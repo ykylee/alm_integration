@@ -1034,10 +1034,11 @@ body[data-screen="data-organizations"] .topbar h1 {
 }
 
 .org-division-tab {
-  display: grid;
-  gap: 4px;
-  min-width: 180px;
-  padding: 12px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 11px 14px;
   border: 1px solid rgba(20, 56, 112, 0.12);
   border-radius: 18px;
   background:
@@ -1051,14 +1052,17 @@ body[data-screen="data-organizations"] .topbar h1 {
     transform 160ms ease,
     box-shadow 160ms ease,
     background 160ms ease;
+  white-space: nowrap;
 }
 
-.org-division-tab strong {
+.org-division-tab-label {
   font-size: 0.95rem;
+  font-weight: 700;
 }
 
-.org-division-tab small {
+.org-division-tab-meta {
   color: var(--muted);
+  font-size: 0.83rem;
 }
 
 .org-division-tab:hover,
@@ -1231,8 +1235,8 @@ body[data-screen="data-organizations"] .topbar h1 {
 }
 
 .org-tree-panel {
-  min-height: 420px;
-  max-height: 620px;
+  min-height: clamp(520px, 60vh, 720px);
+  max-height: clamp(620px, 68vh, 780px);
   overflow-x: auto;
   overflow-y: auto;
   padding-right: 8px;
@@ -1249,12 +1253,11 @@ body[data-screen="data-organizations"] .topbar h1 {
 .org-pyramid-tree {
   position: relative;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   width: max-content;
-  min-width: max(100%, 964px);
-  margin: 0 auto;
+  min-width: 0;
+  margin: 0;
   padding: 12px 42px 24px;
-  transform: translateX(var(--org-pyramid-shift-x, 0px));
   --org-pyramid-card-width: 204px;
   --org-pyramid-child-padding-x: 13px;
 }
