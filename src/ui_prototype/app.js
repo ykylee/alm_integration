@@ -1906,7 +1906,9 @@ function renderBusinessUnitTabs(organizations, workforceItems) {
       )}</span></p><div class="org-pyramid-draft-actions"><button class="control-button secondary" type="button" data-org-top-draft-action="cancel">취소</button><button class="control-button" type="button" data-org-top-draft-action="create">생성</button></div></div>`
     : "";
 
-  target.innerHTML = `${tabButtons}<button class="org-division-add-button" type="button" aria-label="사업부 추가" title="사업부 추가" data-org-top-level-add>+</button>${draftCard}`;
+  target.innerHTML = `<div class="org-division-tab-list">${tabButtons}</div><div class="org-division-actions">${
+    draftCard || ""
+  }<button class="org-division-add-button" type="button" aria-label="사업부 추가" title="사업부 추가" data-org-top-level-add>+</button></div>`;
 }
 
 function renderOrganizationPyramidTree(targetId, organizations, workforceItems, rootCode) {

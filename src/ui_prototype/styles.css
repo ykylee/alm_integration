@@ -1028,10 +1028,29 @@ body[data-screen="data-organizations"] .topbar h1 {
 
 .org-division-tabs {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 10px;
   margin: 14px 0 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.org-division-tab-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   align-items: center;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.org-division-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 10px;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .org-division-tab {
@@ -1110,6 +1129,7 @@ body[data-screen="data-organizations"] .topbar h1 {
 .org-division-draft-card {
   display: grid;
   gap: 10px;
+  width: min(360px, calc(100vw - 140px));
   min-width: min(360px, 100%);
   padding: 14px 16px;
   border: 1px solid rgba(27, 95, 191, 0.16);
