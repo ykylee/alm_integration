@@ -68,7 +68,7 @@
             <ul>
               <li>이 조직이 어디에 속하고 얼마나 큰지 먼저 이해한다.</li>
               <li>이 조직에서 바로 조작할 수 있는 조직/구성원 작업을 분리해 본다.</li>
-              <li>삭제나 이동 전에는 하위 조직, 활성 인원, 후속 영향부터 확인한다.</li>
+              <li>삭제나 이동 전에는 하위 조직, 인원, 후속 영향부터 확인한다.</li>
             </ul>
           </section>
         </aside>
@@ -105,8 +105,8 @@
                 <label class="control-field">
                   <span>범위 필터</span>
                   <select class="control-input" id="organization-directory-scope-select">
-                    <option value="all">전체 조직</option>
-                    <option value="top_level">최상위 조직만</option>
+                    <option value="business_unit">선택 사업부 전체</option>
+                    <option value="top_level">최상위 사업부만</option>
                     <option value="selected_subtree">선택 조직 하위만</option>
                   </select>
                 </label>
@@ -124,99 +124,110 @@
 
           <section class="org-stat-strip">
             <div class="metric-block org-metric-block" id="organization-admin-metrics">
-              <div><span>활성 조직</span><strong>-</strong></div>
-              <div><span>최상위 조직</span><strong>-</strong></div>
-              <div><span>상세 카드</span><strong>-</strong></div>
+              <div><span>조직</span><strong>-</strong></div>
+              <div><span>선택 사업부</span><strong>-</strong></div>
+              <div><span>현재 필터</span><strong>-</strong></div>
             </div>
           </section>
 
-          <section class="org-workbench">
-            <div class="org-column org-column-directory">
-              <section class="panel org-panel">
-                <div class="panel-head">
-                  <h3>조직 디렉터리</h3>
-                  <span>Directory</span>
-                </div>
-                <div class="table-scroll org-directory-table">
-                  <table class="status-table">
-                    <tbody id="data-admin-organizations-body">
-                      <tr><td colspan="3">불러오는 중</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-
-              <section class="panel org-panel">
-                <div class="panel-head">
-                  <h3>조직 구조 트리</h3>
-                  <span>사업부 · 팀 · 그룹 · 파트</span>
-                </div>
-                <div class="tree-panel org-tree-panel" id="organization-tree-panel">
-                  <div class="empty-state">조직 트리를 불러오는 중입니다.</div>
-                </div>
-              </section>
+          <section class="panel org-panel org-tree-stage">
+            <div class="panel-head">
+              <div>
+                <h3>사업부 트리 맵</h3>
+                <span>사업부 탭 · 피라미드형 계층 뷰</span>
+              </div>
             </div>
+            <div class="org-division-tabs" id="organization-division-tabs">
+              <div class="empty-state">사업부 탭을 불러오는 중입니다.</div>
+            </div>
+            <div class="tree-panel org-tree-panel org-pyramid-panel" id="organization-tree-panel">
+              <div class="empty-state">조직 트리를 불러오는 중입니다.</div>
+            </div>
+          </section>
 
-            <div class="org-column org-column-inspector">
-              <section class="panel org-panel org-focus-panel">
-                <div class="panel-head">
-                  <h3>이 조직을 이해하기</h3>
-                  <span>Inspector</span>
+          <section class="panel org-panel org-focus-panel org-selection-stage">
+            <div class="panel-head">
+              <div>
+                <h3>선택 조직에서 시작</h3>
+                <span>Choose · Decide · Run</span>
+              </div>
+            </div>
+            <div class="org-selected-banner" id="organization-selected-banner">
+              <div class="status-chip">선택 대기</div>
+              <p>트리나 디렉터리에서 조직을 선택하면 현재 작업 대상이 여기에 표시됩니다.</p>
+            </div>
+            <div class="org-quick-actions">
+              <button class="control-button" id="organization-open-structure-button" type="button">조직 개편 시작</button>
+              <button class="control-button secondary" id="organization-open-member-button" type="button">구성원 배치 시작</button>
+            </div>
+            <div class="org-focus-shell">
+              <div class="org-focus-primary">
+                <div class="bullet-stack" id="data-admin-organization-detail">
+                  <div><strong>불러오는 중</strong><p>조직 상세를 확인합니다.</p></div>
                 </div>
-                <div class="org-selected-banner" id="organization-selected-banner">
-                  <div class="status-chip">선택 대기</div>
-                  <p>트리나 디렉터리에서 조직을 선택하면 현재 작업 대상이 여기에 표시됩니다.</p>
-                </div>
-                <div class="detail-grid two-col org-inspector-grid">
-                  <div class="bullet-stack" id="data-admin-organization-detail">
-                    <div><strong>불러오는 중</strong><p>조직 상세를 확인합니다.</p></div>
-                  </div>
+                <div class="org-selection-grid">
                   <div class="bullet-stack" id="organization-tree-summary">
                     <div><strong>불러오는 중</strong><p>선택 조직의 구조 요약을 계산합니다.</p></div>
                   </div>
-                </div>
-              </section>
-
-              <section class="panel org-panel">
-                <div class="panel-head">
-                  <h3>이 조직의 직속 구성원</h3>
-                  <span>Direct Members</span>
-                </div>
-                <div class="table-scroll">
-                  <table class="status-table">
-                    <tbody id="organization-direct-members-body">
-                      <tr><td colspan="3">불러오는 중</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-                <div class="bullet-stack compact-bullets" id="organization-direct-members-summary">
-                  <div><strong>불러오는 중</strong><p>선택 조직 기준 직속 구성원과 인력 관리 연동 상태를 계산합니다.</p></div>
-                </div>
-              </section>
-
-              <section class="panel org-panel">
-                <div class="panel-head">
-                  <h3>변경 전에 확인할 영향</h3>
-                  <span>Impact and Checklist</span>
-                </div>
-                <div class="detail-grid two-col">
-                  <div class="bullet-stack" id="organization-admin-action-summary">
-                    <div><strong>불러오는 중</strong><p>조직 변경과 반영 조치를 준비합니다.</p></div>
-                  </div>
-                  <div class="bullet-stack" id="organization-admin-impact-summary">
-                    <div><strong>불러오는 중</strong><p>조직 변경의 후속 영향 범위를 계산합니다.</p></div>
+                  <div class="bullet-stack compact-bullets" id="organization-direct-members-summary">
+                    <div><strong>불러오는 중</strong><p>선택 조직 기준 직속 구성원과 인력 관리 연동 상태를 계산합니다.</p></div>
                   </div>
                 </div>
-              </section>
+              </div>
+              <div class="org-focus-rail">
+                <div class="bullet-stack" id="organization-next-actions">
+                  <div><strong>불러오는 중</strong><p>선택 조직에서 시작할 작업 후보를 정리합니다.</p></div>
+                </div>
+                <div class="bullet-stack" id="organization-admin-impact-summary">
+                  <div><strong>불러오는 중</strong><p>조직 변경의 후속 영향 범위를 계산합니다.</p></div>
+                </div>
+              </div>
             </div>
+          </section>
 
+          <section class="org-workbench org-execution-stage">
+            <div class="org-workbench-tabs" role="tablist" aria-label="조직 작업면 탭">
+              <button
+                class="org-workbench-tab active"
+                id="organization-workbench-tab-structure"
+                type="button"
+                role="tab"
+                aria-selected="true"
+                aria-controls="organization-workbench-panel-structure"
+                data-org-workbench-tab="structure"
+              >
+                조직 개편
+              </button>
+              <button
+                class="org-workbench-tab"
+                id="organization-workbench-tab-member"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="organization-workbench-panel-member"
+                data-org-workbench-tab="member"
+              >
+                구성원 변경
+              </button>
+            </div>
             <div class="org-column org-column-actions">
-              <section class="panel org-panel org-action-panel org-action-panel-primary">
+              <section
+                class="panel org-panel org-action-panel org-action-panel-primary org-workbench-panel active"
+                id="organization-workbench-panel-structure"
+                role="tabpanel"
+                aria-labelledby="organization-workbench-tab-structure"
+                data-org-workbench-panel="structure"
+              >
                 <div class="panel-head">
-                  <h3>조직 구조 변경</h3>
-                  <span>Create · Update · Delete</span>
+                  <h3>1. 조직 개편 실행</h3>
+                  <span>Move Parent · Add Child · Remove Child</span>
                 </div>
-                <p class="org-action-lead">조직 코드, 계층, 상태, 유효기간처럼 조직 자체의 구조 속성을 조정합니다.</p>
+                <p class="org-action-lead">
+                  트리에서 고른 조직을 기준으로 상위 변경, 하위 추가, 하위 정리를 실행하는 작업면입니다.
+                </p>
+                <div class="bullet-stack compact-bullets org-inline-preview" id="organization-action-preview">
+                  <div><strong>영향 미리보기 대기</strong><p>조직 삭제 또는 상위 조직 변경 전 영향을 여기서 확인합니다.</p></div>
+                </div>
                 <div class="control-grid org-form-grid">
                   <label class="control-field">
                     <span>조직 코드</span>
@@ -260,17 +271,26 @@
                   <button class="control-button secondary" id="organization-delete-button" type="button">삭제</button>
                 </div>
                 <p class="status-copy" id="organization-action-status">조직 관리 액션 대기 중</p>
-                <div class="bullet-stack compact-bullets" id="organization-action-preview">
-                  <div><strong>영향 미리보기 대기</strong><p>조직 삭제 또는 상위 조직 변경 전 영향을 여기서 확인합니다.</p></div>
-                </div>
               </section>
 
-              <section class="panel org-panel org-action-panel org-action-panel-secondary">
+              <section
+                class="panel org-panel org-action-panel org-action-panel-secondary org-workbench-panel"
+                id="organization-workbench-panel-member"
+                role="tabpanel"
+                aria-labelledby="organization-workbench-tab-member"
+                data-org-workbench-panel="member"
+                hidden
+              >
                 <div class="panel-head">
-                  <h3>구성원 배치 변경</h3>
-                  <span>Joiner · Mover · Leaver</span>
+                  <h3>2. 구성원 배치 실행</h3>
+                  <span>Add · Move · Remove</span>
                 </div>
-                <p class="org-action-lead">선택 조직 기준으로 직속 구성원을 등록하고, 이동하거나 비활성화합니다.</p>
+                <p class="org-action-lead">
+                  선택 조직에 사람을 배치하거나 다른 조직으로 이동·제거할 때 사용하는 작업면입니다.
+                </p>
+                <div class="bullet-stack compact-bullets org-inline-preview" id="organization-member-action-preview">
+                  <div><strong>이동 영향 대기</strong><p>구성원 이동 또는 비활성화 전 영향을 여기서 확인합니다.</p></div>
+                </div>
                 <div class="control-grid org-form-grid">
                   <label class="control-field">
                     <span>대상 조직</span>
@@ -321,34 +341,136 @@
                   <button class="control-button secondary" id="organization-member-remove-button" type="button">구성원 제거</button>
                 </div>
                 <p class="status-copy" id="organization-member-action-status">직속 구성원 관리 액션 대기 중</p>
-                <div class="bullet-stack compact-bullets" id="organization-member-action-preview">
-                  <div><strong>이동 영향 대기</strong><p>구성원 이동 또는 비활성화 전 영향을 여기서 확인합니다.</p></div>
+              </section>
+            </div>
+
+            <div class="org-column org-column-support">
+              <section class="panel org-panel">
+                <div class="panel-head">
+                  <h3>3. 실행 전 점검</h3>
+                  <span>Check Members · Review Impact</span>
                 </div>
+                <div class="org-tree-selection-note">
+                  <strong>조직 선택은 트리에서 진행</strong>
+                  <p>이제 조직 선택은 상단 트리에서만 진행합니다. 아래에서는 선택된 조직 기준으로 사람과 영향만 점검합니다.</p>
+                </div>
+                <div class="detail-grid org-support-grid">
+                  <div class="org-support-block">
+                    <div class="org-support-block-head">
+                      <strong>작업할 구성원 고르기</strong>
+                      <small>행이나 버튼을 누르면 구성원 배치 탭으로 이어집니다.</small>
+                    </div>
+                    <div class="table-scroll">
+                      <table class="status-table">
+                        <tbody id="organization-direct-members-body">
+                          <tr><td colspan="3">불러오는 중</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+                <div class="detail-grid two-col org-support-grid">
+                  <div class="bullet-stack" id="organization-admin-action-summary">
+                    <div><strong>불러오는 중</strong><p>조직 변경과 반영 조치를 준비합니다.</p></div>
+                  </div>
+                  <div class="bullet-stack" id="organization-operation-questions">
+                    <div><strong>불러오는 중</strong><p>이 조직에서 바로 실행할 작업 판단 포인트를 정리합니다.</p></div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="panel org-panel org-audit-panel">
+                <div class="panel-head">
+                  <h3>4. 변경 추적</h3>
+                  <span>Open When You Need History</span>
+                </div>
+                <details class="org-audit-section">
+                  <summary>조직 변경 기록 보기</summary>
+                  <div class="bullet-stack" id="organization-history-summary">
+                    <div><strong>불러오는 중</strong><p>조직 변경 이력을 불러옵니다.</p></div>
+                  </div>
+                </details>
+                <details class="org-audit-section">
+                  <summary>구성원 이동 기록 보기</summary>
+                  <div class="bullet-stack" id="organization-member-history-summary">
+                    <div><strong>불러오는 중</strong><p>구성원 이동 이력을 불러옵니다.</p></div>
+                  </div>
+                </details>
               </section>
             </div>
           </section>
-
-          <section class="detail-grid two-col org-history-grid">
-            <section class="panel org-panel">
-              <div class="panel-head">
-                <h3>조직 변경 이력</h3>
-                <span>Audit Trail</span>
-              </div>
-              <div class="bullet-stack" id="organization-history-summary">
-                <div><strong>불러오는 중</strong><p>조직 변경 이력을 불러옵니다.</p></div>
-              </div>
-            </section>
-            <section class="panel org-panel">
-              <div class="panel-head">
-                <h3>구성원 이동 이력</h3>
-                <span>Member Movement</span>
-              </div>
-              <div class="bullet-stack" id="organization-member-history-summary">
-                <div><strong>불러오는 중</strong><p>구성원 이동 이력을 불러옵니다.</p></div>
-              </div>
-            </section>
-          </section>
         </main>
+      </div>
+    </div>
+
+    <div class="org-modal-backdrop" id="organization-delete-modal" hidden>
+      <div class="org-modal" role="dialog" aria-modal="true" aria-labelledby="organization-delete-modal-title">
+        <div class="panel-head">
+          <div>
+            <h3 id="organization-delete-modal-title">조직 삭제 확인</h3>
+            <span>Warning · Delete Leaf Organization</span>
+          </div>
+        </div>
+        <p class="org-modal-copy" id="organization-delete-modal-copy">
+          삭제할 조직을 선택하면 경고와 확인 문구가 여기에 표시됩니다.
+        </p>
+        <div class="org-modal-warning">
+          <strong>주의</strong>
+          <p>삭제는 되돌릴 수 없습니다. 직속 하위 조직과 직속 구성원이 없는 조직만 삭제할 수 있습니다.</p>
+        </div>
+        <div class="control-actions">
+          <button class="control-button secondary" id="organization-delete-cancel-button" type="button">취소</button>
+          <button class="control-button" id="organization-delete-confirm-button" type="button">삭제 확인</button>
+        </div>
+        <p class="status-copy" id="organization-delete-modal-status">삭제 대기 중</p>
+      </div>
+    </div>
+
+    <div class="org-modal-backdrop" id="organization-detail-modal" hidden>
+      <div class="org-modal org-modal-wide" role="dialog" aria-modal="true" aria-labelledby="organization-detail-modal-title">
+        <div class="panel-head">
+          <div>
+            <h3 id="organization-detail-modal-title">신규 조직 상세 작성</h3>
+            <span id="organization-detail-modal-subtitle">Complete Details After Basic Create</span>
+          </div>
+        </div>
+        <p class="org-modal-copy" id="organization-detail-modal-copy">
+          기본 오브젝트를 만든 뒤 상태와 유효 기간을 이어서 보완합니다.
+        </p>
+        <div class="control-grid org-form-grid">
+          <label class="control-field">
+            <span>조직 코드</span>
+            <input class="control-input" id="organization-detail-code-input" type="text" readonly />
+          </label>
+          <label class="control-field">
+            <span>조직명</span>
+            <input class="control-input" id="organization-detail-name-input" type="text" />
+          </label>
+          <label class="control-field">
+            <span>상위 조직 코드</span>
+            <input class="control-input" id="organization-detail-parent-input" type="text" />
+          </label>
+          <label class="control-field">
+            <span>상태</span>
+            <select class="control-input" id="organization-detail-status-input">
+              <option value="active">active</option>
+              <option value="inactive">inactive</option>
+            </select>
+          </label>
+          <label class="control-field">
+            <span>유효 시작</span>
+            <input class="control-input" id="organization-detail-effective-from-input" type="text" placeholder="2026-04-09T00:00:00Z" />
+          </label>
+          <label class="control-field">
+            <span>유효 종료</span>
+            <input class="control-input" id="organization-detail-effective-to-input" type="text" placeholder="2026-12-31T00:00:00Z" />
+          </label>
+        </div>
+        <div class="control-actions">
+          <button class="control-button secondary" id="organization-detail-close-button" type="button">닫기</button>
+          <button class="control-button" id="organization-detail-save-button" type="button">상세 저장</button>
+        </div>
+        <p class="status-copy" id="organization-detail-modal-status">상세 작성 대기 중</p>
       </div>
     </div>
 

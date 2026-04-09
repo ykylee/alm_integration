@@ -23,8 +23,8 @@ pub struct WorkforceRecord {
     pub employee_number: String,
     pub display_name: String,
     pub employment_status: String,
-    pub primary_organization_code: String,
-    pub primary_organization_name: String,
+    pub primary_organization_code: Option<String>,
+    pub primary_organization_name: Option<String>,
     pub job_family: Option<String>,
     pub email: Option<String>,
     pub created_at: String,
@@ -86,7 +86,7 @@ pub struct UpsertWorkforceInput {
     pub employee_number: String,
     pub display_name: String,
     pub employment_status: String,
-    pub primary_organization_code: String,
+    pub primary_organization_code: Option<String>,
     pub job_family: Option<String>,
     pub email: Option<String>,
 }
@@ -338,13 +338,25 @@ impl MasterDataStore {
             record.parent_organization_code.as_deref() == Some(organization_code)
                 && record.organization_status != "deleted"
         });
-        let has_member = self.workforce.iter().any(|record| {
-            record.primary_organization_code == organization_code
-                && record.employment_status != "inactive"
-        });
-
-        if has_child || has_member {
+        if has_child {
             return Err(MasterDataStoreError::InvalidReference);
+        }
+
+        let affected_members: Vec<(String, String)> = self
+            .workforce
+            .iter()
+            .filter(|record| record.primary_organization_code.as_deref() == Some(organization_code))
+            .map(|record| (record.employee_number.clone(), record.display_name.clone()))
+            .collect();
+
+        for workforce in self
+            .workforce
+            .iter_mut()
+            .filter(|record| record.primary_organization_code.as_deref() == Some(organization_code))
+        {
+            workforce.primary_organization_code = None;
+            workforce.primary_organization_name = None;
+            workforce.updated_at = Utc::now().to_rfc3339();
         }
 
         let existing = &mut self.organizations[index];
@@ -357,6 +369,18 @@ impl MasterDataStore {
             "delete",
             format!("조직 {} 삭제", deleted.organization_name),
         );
+        for (employee_number, display_name) in affected_members {
+            self.push_workforce_log(
+                &employee_number,
+                "unassign",
+                Some(organization_code.to_string()),
+                None,
+                format!(
+                    "조직 {} 삭제로 구성원 {} 이(가) 미배정 상태로 전환",
+                    deleted.organization_name, display_name
+                ),
+            );
+        }
         Ok(deleted)
     }
 
@@ -399,9 +423,8 @@ impl MasterDataStore {
         let organization = self
             .organizations
             .iter()
-            .find(|record| record.organization_code == input.primary_organization_code)
-            .cloned()
-            .ok_or(MasterDataStoreError::InvalidReference)?;
+            .find(|record| Some(record.organization_code.clone()) == input.primary_organization_code)
+            .cloned();
 
         let now = Utc::now().to_rfc3339();
         let record = if let Some(existing) = self
@@ -411,8 +434,10 @@ impl MasterDataStore {
         {
             existing.display_name = input.display_name;
             existing.employment_status = input.employment_status;
-            existing.primary_organization_code = organization.organization_code.clone();
-            existing.primary_organization_name = organization.organization_name.clone();
+            existing.primary_organization_code =
+                organization.as_ref().map(|item| item.organization_code.clone());
+            existing.primary_organization_name =
+                organization.as_ref().map(|item| item.organization_name.clone());
             existing.job_family = input.job_family;
             existing.email = input.email;
             existing.updated_at = now.clone();
@@ -423,8 +448,8 @@ impl MasterDataStore {
                 employee_number: input.employee_number,
                 display_name: input.display_name,
                 employment_status: input.employment_status,
-                primary_organization_code: organization.organization_code,
-                primary_organization_name: organization.organization_name,
+                primary_organization_code: organization.as_ref().map(|item| item.organization_code.clone()),
+                primary_organization_name: organization.as_ref().map(|item| item.organization_name.clone()),
                 job_family: input.job_family,
                 email: input.email,
                 created_at: now.clone(),
@@ -438,7 +463,7 @@ impl MasterDataStore {
             &record.employee_number,
             if existed { "update" } else { "create" },
             None,
-            Some(record.primary_organization_code.clone()),
+            record.primary_organization_code.clone(),
             format!("구성원 {} 저장", record.display_name),
         );
         Ok(record)
@@ -459,13 +484,16 @@ impl MasterDataStore {
         let next_org_code = input
             .primary_organization_code
             .clone()
-            .unwrap_or_else(|| self.workforce[index].primary_organization_code.clone());
-        let organization = self
-            .organizations
-            .iter()
-            .find(|record| record.organization_code == next_org_code)
-            .cloned()
-            .ok_or(MasterDataStoreError::InvalidReference)?;
+            .or_else(|| self.workforce[index].primary_organization_code.clone());
+        let organization = next_org_code.as_ref().and_then(|organization_code| {
+            self.organizations
+                .iter()
+                .find(|record| record.organization_code == *organization_code)
+                .cloned()
+        });
+        if next_org_code.is_some() && organization.is_none() {
+            return Err(MasterDataStoreError::InvalidReference);
+        }
 
         let existing = &mut self.workforce[index];
         if let Some(display_name) = input.display_name {
@@ -474,8 +502,8 @@ impl MasterDataStore {
         if let Some(status) = input.employment_status {
             existing.employment_status = status;
         }
-        existing.primary_organization_code = organization.organization_code;
-        existing.primary_organization_name = organization.organization_name;
+        existing.primary_organization_code = organization.as_ref().map(|item| item.organization_code.clone());
+        existing.primary_organization_name = organization.as_ref().map(|item| item.organization_name.clone());
         if let Some(job_family) = input.job_family {
             existing.job_family = job_family;
         }
@@ -488,8 +516,8 @@ impl MasterDataStore {
         self.push_workforce_log(
             &updated.employee_number,
             "update",
-            Some(previous_organization_code),
-            Some(updated.primary_organization_code.clone()),
+            previous_organization_code,
+            updated.primary_organization_code.clone(),
             format!("구성원 {} 수정", updated.display_name),
         );
         Ok(updated)
@@ -512,8 +540,8 @@ impl MasterDataStore {
         self.push_workforce_log(
             &deleted.employee_number,
             "deactivate",
-            Some(deleted.primary_organization_code.clone()),
-            Some(deleted.primary_organization_code.clone()),
+            deleted.primary_organization_code.clone(),
+            deleted.primary_organization_code.clone(),
             format!("구성원 {} 비활성화", deleted.display_name),
         );
         Ok(deleted)
@@ -524,9 +552,11 @@ impl MasterDataStore {
             if let Some(organization) = self
                 .organizations
                 .iter()
-                .find(|record| record.organization_code == workforce.primary_organization_code)
+                .find(|record| Some(record.organization_code.clone()) == workforce.primary_organization_code)
             {
-                workforce.primary_organization_name = organization.organization_name.clone();
+                workforce.primary_organization_name = Some(organization.organization_name.clone());
+            } else {
+                workforce.primary_organization_name = None;
             }
         }
     }
@@ -967,23 +997,35 @@ impl MasterDataRepository {
         .fetch_one(&mut *transaction)
         .await?;
 
-        let member_count: i64 = sqlx::query_scalar(
+        if child_count > 0 {
+            return Err(MasterDataRepositoryError::InvalidReference(
+                "organization has active children".to_string(),
+            ));
+        }
+
+        let affected_members = sqlx::query(
             r#"
-            select count(*)
+            select employee_number, display_name
             from workforce_master
             where primary_organization_id = $1
-              and employment_status <> 'inactive'
             "#,
         )
         .bind(organization_id)
-        .fetch_one(&mut *transaction)
+        .fetch_all(&mut *transaction)
         .await?;
 
-        if child_count > 0 || member_count > 0 {
-            return Err(MasterDataRepositoryError::InvalidReference(
-                "organization has active children or members".to_string(),
-            ));
-        }
+        sqlx::query(
+            r#"
+            update workforce_master
+            set primary_organization_id = null,
+                updated_at = $2
+            where primary_organization_id = $1
+            "#,
+        )
+        .bind(organization_id)
+        .bind(Utc::now())
+        .execute(&mut *transaction)
+        .await?;
 
         sqlx::query(
             r#"
@@ -1028,6 +1070,22 @@ impl MasterDataRepository {
             &format!("조직 {} 삭제", organization_code),
         )
         .await?;
+        for member in affected_members {
+            let employee_number: String = member.get("employee_number");
+            let display_name: String = member.get("display_name");
+            insert_workforce_log(
+                &mut transaction,
+                &employee_number,
+                "unassign",
+                Some(organization_code.to_string()),
+                None,
+                &format!(
+                    "조직 {} 삭제로 구성원 {} 이(가) 미배정 상태로 전환",
+                    organization_code, display_name
+                ),
+            )
+            .await?;
+        }
 
         transaction.commit().await?;
         Ok(map_organization_row(&row))
@@ -1051,7 +1109,7 @@ impl MasterDataRepository {
               wm.created_at,
               wm.updated_at
             from workforce_master wm
-            join organization_master om
+            left join organization_master om
               on om.organization_id = wm.primary_organization_id
             where ($1::varchar is null or wm.employment_status = $1)
               and ($2::varchar is null or om.organization_code = $2)
@@ -1098,24 +1156,33 @@ impl MasterDataRepository {
         input: UpsertWorkforceInput,
     ) -> Result<WorkforceRecord, MasterDataRepositoryError> {
         let mut transaction = self.pool.begin().await?;
-        let primary_organization_row = sqlx::query(
-            r#"
-            select organization_id, organization_code, organization_name
-            from organization_master
-            where organization_code = $1
-            "#,
-        )
-        .bind(&input.primary_organization_code)
-        .fetch_optional(&mut *transaction)
-        .await?
-        .ok_or_else(|| {
-            MasterDataRepositoryError::InvalidReference(format!(
-                "organization not found: {}",
-                input.primary_organization_code
-            ))
-        })?;
+        let primary_organization_row = if let Some(primary_organization_code) =
+            input.primary_organization_code.as_ref()
+        {
+            Some(
+                sqlx::query(
+                    r#"
+                    select organization_id, organization_code, organization_name
+                    from organization_master
+                    where organization_code = $1
+                    "#,
+                )
+                .bind(primary_organization_code)
+                .fetch_optional(&mut *transaction)
+                .await?
+                .ok_or_else(|| {
+                    MasterDataRepositoryError::InvalidReference(format!(
+                        "organization not found: {primary_organization_code}"
+                    ))
+                })?,
+            )
+        } else {
+            None
+        };
 
-        let primary_organization_id: Uuid = primary_organization_row.get("organization_id");
+        let primary_organization_id: Option<Uuid> = primary_organization_row
+            .as_ref()
+            .map(|row| row.get("organization_id"));
 
         let existing_workforce_id = sqlx::query_scalar::<_, Uuid>(
             "select workforce_id from workforce_master where employee_number = $1",
@@ -1193,7 +1260,7 @@ impl MasterDataRepository {
               wm.created_at,
               wm.updated_at
             from workforce_master wm
-            join organization_master om
+            left join organization_master om
               on om.organization_id = wm.primary_organization_id
             where wm.workforce_id = $1
             "#,
@@ -1207,7 +1274,7 @@ impl MasterDataRepository {
             &input.employee_number,
             "upsert",
             None,
-            Some(input.primary_organization_code.clone()),
+            input.primary_organization_code.clone(),
             &format!("구성원 {} 저장", input.display_name),
         )
         .await?;
@@ -1239,7 +1306,7 @@ impl MasterDataRepository {
               wm.job_family,
               wm.email
             from workforce_master wm
-            join organization_master om on om.organization_id = wm.primary_organization_id
+            left join organization_master om on om.organization_id = wm.primary_organization_id
             where wm.employee_number = $1
             "#,
         )
@@ -1253,24 +1320,32 @@ impl MasterDataRepository {
         let workforce_id: Uuid = current_row.get("workforce_id");
         let current_display_name: String = current_row.get("display_name");
         let current_employment_status: String = current_row.get("employment_status");
-        let current_primary_organization_code: String =
+        let current_primary_organization_code: Option<String> =
             current_row.get("primary_organization_code");
         let current_job_family: Option<String> = current_row.get("job_family");
         let current_email: Option<String> = current_row.get("email");
 
         let next_organization_code =
-            primary_organization_code.unwrap_or(current_primary_organization_code.clone());
-        let primary_organization_id = sqlx::query_scalar::<_, Uuid>(
-            "select organization_id from organization_master where organization_code = $1",
-        )
-        .bind(&next_organization_code)
-        .fetch_optional(&mut *transaction)
-        .await?
-        .ok_or_else(|| {
-            MasterDataRepositoryError::InvalidReference(format!(
-                "organization not found: {next_organization_code}"
-            ))
-        })?;
+            primary_organization_code.or_else(|| current_primary_organization_code.clone());
+        let primary_organization_id = if let Some(next_organization_code) =
+            next_organization_code.as_ref()
+        {
+            Some(
+                sqlx::query_scalar::<_, Uuid>(
+                    "select organization_id from organization_master where organization_code = $1",
+                )
+                .bind(next_organization_code)
+                .fetch_optional(&mut *transaction)
+                .await?
+                .ok_or_else(|| {
+                    MasterDataRepositoryError::InvalidReference(format!(
+                        "organization not found: {next_organization_code}"
+                    ))
+                })?,
+            )
+        } else {
+            None
+        };
 
         let next_display_name = display_name.unwrap_or(current_display_name.clone());
         let next_employment_status = employment_status.unwrap_or(current_employment_status);
@@ -1313,7 +1388,7 @@ impl MasterDataRepository {
               wm.created_at,
               wm.updated_at
             from workforce_master wm
-            join organization_master om
+            left join organization_master om
               on om.organization_id = wm.primary_organization_id
             where wm.workforce_id = $1
             "#,
@@ -1326,8 +1401,8 @@ impl MasterDataRepository {
             &mut transaction,
             employee_number,
             "update",
-            Some(current_primary_organization_code),
-            Some(next_organization_code),
+            current_primary_organization_code,
+            next_organization_code,
             &format!("구성원 {} 수정", next_display_name),
         )
         .await?;
@@ -1378,7 +1453,7 @@ impl MasterDataRepository {
               wm.created_at,
               wm.updated_at
             from workforce_master wm
-            join organization_master om
+            left join organization_master om
               on om.organization_id = wm.primary_organization_id
             where wm.workforce_id = $1
             "#,
@@ -1393,7 +1468,7 @@ impl MasterDataRepository {
               wm.display_name,
               om.organization_code as primary_organization_code
             from workforce_master wm
-            join organization_master om on om.organization_id = wm.primary_organization_id
+            left join organization_master om on om.organization_id = wm.primary_organization_id
             where wm.workforce_id = $1
             "#,
         )
@@ -1401,14 +1476,14 @@ impl MasterDataRepository {
         .fetch_one(&mut *transaction)
         .await?;
         let display_name: String = current_row.get("display_name");
-        let organization_code: String = current_row.get("primary_organization_code");
+        let organization_code: Option<String> = current_row.get("primary_organization_code");
 
         insert_workforce_log(
             &mut transaction,
             employee_number,
             "deactivate",
-            Some(organization_code.clone()),
-            Some(organization_code),
+            organization_code.clone(),
+            organization_code,
             &format!("구성원 {} 비활성화", display_name),
         )
         .await?;
@@ -1616,7 +1691,7 @@ fn match_workforce_filter(record: &WorkforceRecord, filter: &WorkforceListFilter
         && filter
             .primary_organization_code
             .as_ref()
-            .map_or(true, |value| &record.primary_organization_code == value)
+            .map_or(true, |value| record.primary_organization_code.as_deref() == Some(value.as_str()))
 }
 
 fn build_organization_structure_snapshot(
@@ -1660,11 +1735,16 @@ fn build_organization_structure_snapshot(
     let subtree_codes = collect_subtree_codes(organizations, organization_code);
     let direct_member_count = workforce
         .iter()
-        .filter(|record| record.primary_organization_code == organization_code)
+        .filter(|record| record.primary_organization_code.as_deref() == Some(organization_code))
         .count();
     let subtree_active_member_count = workforce
         .iter()
-        .filter(|record| subtree_codes.contains(&record.primary_organization_code))
+        .filter(|record| {
+            record
+                .primary_organization_code
+                .as_ref()
+                .is_some_and(|organization_code| subtree_codes.contains(organization_code))
+        })
         .count();
 
     Some(OrganizationStructureSnapshotRecord {

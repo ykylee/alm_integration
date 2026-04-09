@@ -58,7 +58,7 @@
             <h2>운영 포인트</h2>
             <ul>
               <li>어느 조직의 어떤 인력을 보고 있는지 먼저 분명히 확인한다.</li>
-              <li>이동과 비활성화 전에는 참조 영향과 대상 조직 수용 상태를 본다.</li>
+              <li>이동과 상태 변경 전에는 참조 영향과 대상 조직 수용 상태를 본다.</li>
               <li>인력 수정은 조직 맥락과 같은 화면 안에서 끝낼 수 있어야 한다.</li>
             </ul>
           </section>
@@ -112,7 +112,7 @@
           <section class="data-stat-strip">
             <div class="metric-block data-metric-block" id="workforce-admin-metrics">
               <div><span>조직 필터</span><strong>-</strong></div>
-              <div><span>활성 인력</span><strong>-</strong></div>
+              <div><span>인력</span><strong>-</strong></div>
               <div><span>직군 정보</span><strong>-</strong></div>
             </div>
           </section>
@@ -146,6 +146,20 @@
                 <div class="table-scroll data-list-table">
                   <table class="status-table">
                     <tbody id="data-admin-workforce-body">
+                      <tr><td colspan="3">불러오는 중</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section class="panel data-panel">
+                <div class="panel-head">
+                  <h3>미배정 인력</h3>
+                  <span>Unassigned Workforce</span>
+                </div>
+                <div class="table-scroll data-list-table">
+                  <table class="status-table">
+                    <tbody id="data-admin-unassigned-workforce-body">
                       <tr><td colspan="3">불러오는 중</td></tr>
                     </tbody>
                   </table>

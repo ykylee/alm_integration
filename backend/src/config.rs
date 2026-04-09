@@ -7,6 +7,7 @@ pub struct Settings {
     pub database_url: String,
     pub database_max_connections: u32,
     pub auto_apply_migrations: bool,
+    pub cors_allowed_origins: Vec<String>,
 }
 
 impl Settings {
@@ -38,14 +39,36 @@ impl Settings {
             .map(|value| parse_bool_flag("ALM_BACKEND_AUTO_APPLY_MIGRATIONS", value))
             .transpose()?
             .unwrap_or(true);
+        let cors_allowed_origins = values
+            .get("ALM_BACKEND_CORS_ALLOWED_ORIGINS")
+            .map(|value| {
+                value
+                    .split(',')
+                    .map(str::trim)
+                    .filter(|item| !item.is_empty())
+                    .map(ToString::to_string)
+                    .collect::<Vec<_>>()
+            })
+            .filter(|origins| !origins.is_empty())
+            .unwrap_or_else(default_cors_allowed_origins);
 
         Ok(Self {
             bind_address,
             database_url,
             database_max_connections,
             auto_apply_migrations,
+            cors_allowed_origins,
         })
     }
+}
+
+pub fn default_cors_allowed_origins() -> Vec<String> {
+    vec![
+        "http://127.0.0.1:8000".to_string(),
+        "http://localhost:8000".to_string(),
+        "http://127.0.0.1:8001".to_string(),
+        "http://localhost:8001".to_string(),
+    ]
 }
 
 fn parse_bool_flag(name: &str, value: &str) -> Result<bool> {
@@ -93,6 +116,10 @@ mod tests {
                 "ALM_BACKEND_AUTO_APPLY_MIGRATIONS".to_string(),
                 "false".to_string(),
             ),
+            (
+                "ALM_BACKEND_CORS_ALLOWED_ORIGINS".to_string(),
+                "http://127.0.0.1:8000, http://100.90.113.29:8000".to_string(),
+            ),
         ]);
 
         let settings = Settings::from_map(&values).expect("settings should parse");
@@ -104,6 +131,13 @@ mod tests {
         );
         assert_eq!(settings.database_max_connections, 12);
         assert!(!settings.auto_apply_migrations);
+        assert_eq!(
+            settings.cors_allowed_origins,
+            vec![
+                "http://127.0.0.1:8000".to_string(),
+                "http://100.90.113.29:8000".to_string()
+            ]
+        );
     }
 
     #[test]
@@ -118,5 +152,14 @@ mod tests {
         assert_eq!(settings.bind_address, "127.0.0.1:8080");
         assert_eq!(settings.database_max_connections, 10);
         assert!(settings.auto_apply_migrations);
+        assert_eq!(
+            settings.cors_allowed_origins,
+            vec![
+                "http://127.0.0.1:8000".to_string(),
+                "http://localhost:8000".to_string(),
+                "http://127.0.0.1:8001".to_string(),
+                "http://localhost:8001".to_string()
+            ]
+        );
     }
 }

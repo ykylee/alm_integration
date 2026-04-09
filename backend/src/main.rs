@@ -13,7 +13,7 @@ use app_state::AppState;
 use axum::Router;
 use config::Settings;
 use db::pool::{connect, run_migrations};
-use http::router::build_router;
+use http::router::build_router_with_origins;
 use security::ingestion_auth::build_ingestion_auth_registry_from_endpoint_configs;
 use tokio::net::TcpListener;
 use tracing::{info, warn};
@@ -29,7 +29,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let state = build_state(db_pool).await;
-    let app: Router = build_router(state);
+    let app: Router = build_router_with_origins(state, &settings.cors_allowed_origins);
     let address: SocketAddr = settings.bind_address.parse()?;
     let listener = TcpListener::bind(address).await?;
 

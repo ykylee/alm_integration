@@ -129,6 +129,7 @@ async fn connect_and_migrate(test_db: &TestDatabase) -> anyhow::Result<PgPool> {
         database_url: test_db.database_url(),
         database_max_connections: 5,
         auto_apply_migrations: true,
+        cors_allowed_origins: vec![],
     };
     let pool = connect(&settings).await?;
     run_migrations(&pool).await?;

@@ -380,7 +380,7 @@ const pageContent = {
       title: "Master Data Impact",
       summary: "조직/인력 기준정보와 조직 변경이 내부 마스터와 승인 경로에 주는 영향을 본다.",
       points: [
-        ["조직 마스터", "활성 28개 조직 중 1건 개편 예정"],
+        ["조직 마스터", "조직 28개 중 1건 개편 예정"],
         ["인력 기준정보", "주 소속 변경 3건 반영 대기"],
         ["계정계", "Crowd 그룹 2건 재계산 필요"],
       ],
@@ -616,7 +616,7 @@ const pageContent = {
       title: "Organization Master Surface",
       summary: "조직 코드를 기준으로 상태, 상위 조직, 유효기간, 영향 범위를 조직 전용 작업면에서 관리한다.",
       points: [
-        ["조직 목록", "활성 조직 기준 현황 확인"],
+        ["조직 목록", "조직 기준 현황 확인"],
         ["구조 정보", "상위 조직과 유효기간 검토"],
         ["영향 범위", "후속 인력과 도메인 참조 영향 확인"],
       ],
@@ -630,7 +630,7 @@ const pageContent = {
       summary: "조직 기준으로 인력 목록을 조회하고 재직 상태, 직군, 소속 반영 결과를 함께 본다.",
       points: [
         ["조직 필터", "조직별 인력 리스트 조회"],
-        ["재직 상태", "활성 인력 기준 상태 확인"],
+        ["재직 상태", "비활성 인력 중심 상태 확인"],
         ["연결 상태", "조직 기준 인력 반영 결과 검토"],
       ],
     },
@@ -735,10 +735,27 @@ renderRole(localStorage.getItem("prototypeRole") || "developer");
 
 const PROTOTYPE_API_BASE_KEY = "prototypeApiBaseUrl";
 const PROTOTYPE_SELECTED_ORGANIZATION_KEY = "prototypeSelectedOrganizationCode";
+const PROTOTYPE_SELECTED_BUSINESS_UNIT_KEY = "prototypeSelectedBusinessUnitCode";
+const PROTOTYPE_ORGANIZATION_WORKBENCH_TAB_KEY = "prototypeOrganizationWorkbenchTab";
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8080/api/v1";
 const organizationAdminState = {
   organizations: [],
   workforce: [],
+};
+const organizationTreeUiState = {
+  draftParentCode: "",
+  draftType: "team",
+  draftName: "",
+  draftKey: "",
+  deleteTargetCode: "",
+  detailTargetCode: "",
+  detailMode: "create",
+  editTargetCode: "",
+  editName: "",
+  editParentCode: "",
+  editStatus: "active",
+  editEffectiveFrom: "",
+  editEffectiveTo: "",
 };
 const workforceAdminState = {
   items: [],
@@ -790,6 +807,30 @@ function setSelectedOrganizationCode(value) {
     return;
   }
   localStorage.setItem(PROTOTYPE_SELECTED_ORGANIZATION_KEY, value);
+}
+
+function getSelectedBusinessUnitCode() {
+  return localStorage.getItem(PROTOTYPE_SELECTED_BUSINESS_UNIT_KEY) || "";
+}
+
+function setSelectedBusinessUnitCode(value) {
+  if (!value) {
+    localStorage.removeItem(PROTOTYPE_SELECTED_BUSINESS_UNIT_KEY);
+    return;
+  }
+  localStorage.setItem(PROTOTYPE_SELECTED_BUSINESS_UNIT_KEY, value);
+}
+
+function getSelectedOrganizationWorkbenchTab() {
+  return localStorage.getItem(PROTOTYPE_ORGANIZATION_WORKBENCH_TAB_KEY) || "structure";
+}
+
+function setSelectedOrganizationWorkbenchTab(value) {
+  if (!value) {
+    localStorage.removeItem(PROTOTYPE_ORGANIZATION_WORKBENCH_TAB_KEY);
+    return;
+  }
+  localStorage.setItem(PROTOTYPE_ORGANIZATION_WORKBENCH_TAB_KEY, value);
 }
 
 function setApiStatus(kind, message) {
@@ -847,6 +888,35 @@ function renderBulletSummary(targetId, items, emptyMessage) {
     .join("");
 }
 
+function renderOrganizationWorkbenchTab() {
+  const activeTab = getSelectedOrganizationWorkbenchTab();
+  document.querySelectorAll("[data-org-workbench-tab]").forEach((button) => {
+    const isActive = button.dataset.orgWorkbenchTab === activeTab;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+  document.querySelectorAll("[data-org-workbench-panel]").forEach((panel) => {
+    const isActive = panel.dataset.orgWorkbenchPanel === activeTab;
+    panel.classList.toggle("active", isActive);
+    panel.hidden = !isActive;
+  });
+}
+
+function scrollToOrganizationWorkbenchTab(tab) {
+  const panel = document.querySelector(`[data-org-workbench-panel="${tab}"]`);
+  if (!panel) return;
+  panel.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function activateOrganizationWorkbenchTab(tab, options = {}) {
+  const { scroll = true } = options;
+  setSelectedOrganizationWorkbenchTab(tab);
+  renderOrganizationWorkbenchTab();
+  if (scroll) {
+    scrollToOrganizationWorkbenchTab(tab);
+  }
+}
+
 function formatRelativeTime(value) {
   if (!value) return "-";
   const date = new Date(value);
@@ -861,6 +931,10 @@ function formatRelativeTime(value) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function formatInactiveBadge(status) {
+  return status === "inactive" ? " · 비활성" : "";
 }
 
 async function fetchJson(baseUrl, path, params = {}) {
@@ -995,8 +1069,8 @@ async function loadAdminLiveData() {
 
     setMetricBlock("admin-live-metrics", [
       { label: "동기화 실행", value: `${syncRunItems.length}건` },
-      { label: "활성 조직", value: `${organizationItems.length}개` },
-      { label: "활성 인력", value: `${workforceItems.length}명` },
+      { label: "조직", value: `${organizationItems.length}개` },
+      { label: "인력", value: `${workforceItems.length}명` },
     ]);
     renderTableRows("admin-sync-runs-body", latestSyncRows, "표시할 동기화 실행 이력이 없습니다.");
     renderBulletSummary(
@@ -1021,8 +1095,8 @@ async function loadAdminLiveData() {
   } catch (error) {
     setMetricBlock("admin-live-metrics", [
       { label: "동기화 실행", value: "-" },
-      { label: "활성 조직", value: "-" },
-      { label: "활성 인력", value: "-" },
+      { label: "조직", value: "-" },
+      { label: "인력", value: "-" },
     ]);
     renderTableRows("admin-sync-runs-body", [], "동기화 실행 이력을 불러오지 못했습니다.");
     renderBulletSummary("admin-organization-summary", [], "조직 기준정보를 불러오지 못했습니다.");
@@ -1264,7 +1338,7 @@ function summarizeOrganizationImpact(items) {
   return [
     {
       title: "구조 영향",
-      body: `현재 활성 조직 ${items.length}개 중 최상위 조직 ${topLevelCount}개를 기준으로 트리 확장이 가능합니다.`,
+      body: `현재 조직 ${items.length}개 중 최상위 조직 ${topLevelCount}개를 기준으로 트리 확장이 가능합니다.`,
     },
     {
       title: "기준정보 영향",
@@ -1273,6 +1347,91 @@ function summarizeOrganizationImpact(items) {
     {
       title: "운영 기준",
       body: "조직 관리 화면은 구조 변경과 유효기간 점검을 먼저 수행하는 기준 작업면입니다.",
+    },
+  ];
+}
+
+function summarizeOrganizationProfile(record, snapshot, workforceItems) {
+  if (!record) {
+    return [{ title: "선택 조직 없음", body: "트리나 디렉터리에서 작업할 조직을 먼저 선택하세요." }];
+  }
+
+  const activeDirectMembers = workforceItems.filter(
+    (item) =>
+      item.primary_organization_code === record.organization_code &&
+      item.employment_status !== "inactive",
+  ).length;
+
+  return [
+    {
+      title: `${record.organization_name}`,
+      body: `${record.organization_code} · 상위 ${record.parent_organization_code || "없음"} · 상태 ${record.organization_status}`,
+    },
+    {
+      title: "지금 바로 볼 수 있는 규모",
+      body: `직속 구성원 ${activeDirectMembers}명 · 직속 하위 ${snapshot?.children.length || 0}개 · 유효 시작 ${record.effective_from || "-"}`,
+    },
+  ];
+}
+
+function summarizeOrganizationTaskOptions(snapshot, workforceItems) {
+  if (!snapshot) {
+    return [{ title: "작업 대상 선택 필요", body: "트리나 디렉터리에서 조직을 선택하면 여기서 바로 시작할 작업이 정리됩니다." }];
+  }
+
+  const hasChildren = snapshot.children.length > 0;
+  const directMembers = workforceItems.filter(
+    (item) =>
+      item.primary_organization_code === snapshot.organization_code &&
+      item.employment_status !== "inactive",
+  ).length;
+
+  return [
+    {
+      title: "상위 조직 바꾸기",
+      body: `현재 상위 ${snapshot.parent_organization_code || "없음"} · 이동 시 하위 ${snapshot.subtree_organization_count}개 조직이 함께 움직입니다.`,
+    },
+    {
+      title: "하위 조직 다루기",
+      body: hasChildren
+        ? `직속 하위 ${snapshot.children.length}개가 있어 추가 전에 정리 기준을 먼저 확인해야 합니다.`
+        : "직속 하위가 없어 새 조직을 바로 추가하기 좋습니다.",
+    },
+    {
+      title: "구성원 배치 바꾸기",
+      body: `직속 구성원 ${directMembers}명 기준으로 추가, 이동, 제거 작업을 시작할 수 있습니다.`,
+    },
+  ];
+}
+
+function summarizeOrganizationOperationQuestions(snapshot, workforceItems) {
+  if (!snapshot) {
+    return [{ title: "운영 질문 준비", body: "조직을 선택하면 이 조직에서 흔히 확인하는 질문을 보여줍니다." }];
+  }
+
+  const activeMembers = workforceItems.filter(
+    (item) =>
+      item.primary_organization_code === snapshot.organization_code &&
+      item.employment_status !== "inactive",
+  ).length;
+
+  return [
+    {
+      title: "어디로 옮길 수 있나",
+      body: snapshot.ancestors.length
+        ? `현재 경로 ${snapshot.ancestors.map((item) => item.organization_name).join(" > ")}`
+        : "최상위 조직이라 상위 경로가 없습니다.",
+    },
+    {
+      title: "지금 정리할 수 있나",
+      body:
+        snapshot.children.length || activeMembers
+          ? `아직 어렵습니다. 직속 하위 ${snapshot.children.length}개, 직속 구성원 ${activeMembers}명이 남아 있습니다.`
+          : "직속 하위와 직속 구성원이 없어 정리 판단을 바로 진행할 수 있습니다.",
+    },
+    {
+      title: "무엇부터 확인할까",
+      body: "상위 경로, 직속 하위, 직속 구성원, 최근 변경만 보고 바로 작업을 고르면 됩니다.",
     },
   ];
 }
@@ -1335,7 +1494,7 @@ function summarizeWorkforceDirectory(items, organizationCode) {
   return [
     {
       title: `${organizationCode || "전체"} 범위 ${items.length}명`,
-      body: `활성 ${activeCount}명 · 조직 ${orgCount}개 · 직군 ${jobFamilyCount}개 기준으로 보고 있습니다.`,
+      body: `${activeCount}명 · 조직 ${orgCount}개 · 직군 ${jobFamilyCount}개 기준으로 보고 있습니다.`,
     },
     {
       title: "이 페이지에서 얻는 정보",
@@ -1362,7 +1521,7 @@ function summarizeSelectedWorkforce(selected, organizationCode, items) {
     },
     {
       title: "현재 조직 문맥",
-      body: `${selected.primary_organization_name || "현재 조직"} 에서 함께 보이는 활성 인력 ${peers}명 중 한 명입니다.`,
+      body: `${selected.primary_organization_name || "현재 조직"} 에서 함께 보이는 인원 ${peers}명 중 한 명입니다.`,
     },
     {
       title: "참조 사용 위치",
@@ -1403,7 +1562,7 @@ function summarizeWorkforceImpact(selected) {
     },
     {
       title: "조직 정원 관점",
-      body: "조직 이동 시 현재 조직과 대상 조직의 활성 인력 수가 함께 변하므로 두 조직을 같이 확인해야 합니다.",
+      body: "조직 이동 시 현재 조직과 대상 조직의 인원 수가 함께 변하므로 두 조직을 같이 확인해야 합니다.",
     },
     {
       title: "감사 추적",
@@ -1431,7 +1590,7 @@ function summarizeWorkforceActionPreview(items) {
     return [
       {
         title: "신규 등록 모드",
-        body: `${organizationCode} 에 새 구성원을 등록할 예정입니다. 현재 이 범위에서 같은 조직 활성 인력은 ${currentCount}명입니다.`,
+        body: `${organizationCode} 에 새 구성원을 등록할 예정입니다. 현재 이 범위에서 같은 조직 인원은 ${currentCount}명입니다.`,
       },
       {
         title: "입력 점검",
@@ -1444,7 +1603,7 @@ function summarizeWorkforceActionPreview(items) {
     return [
       {
         title: "비활성화 영향",
-        body: `${member.display_name} 을 비활성화하면 현재 조직 활성 인력은 ${Math.max(currentCount - 1, 0)}명으로 줄어듭니다.`,
+        body: `${member.display_name} 을 비활성화하면 현재 조직 인원은 ${Math.max(currentCount - 1, 0)}명으로 줄어듭니다.`,
       },
       {
         title: "후속 확인",
@@ -1582,11 +1741,31 @@ function getOrganizationAncestorCodes(organizations, organizationCode) {
   return codes;
 }
 
+function getTopLevelOrganizations(organizations) {
+  const topLevelOrganizations = organizations
+    .filter((item) => !item.parent_organization_code && item.organization_status !== "deleted")
+    .sort((left, right) => left.organization_code.localeCompare(right.organization_code));
+  const businessUnits = topLevelOrganizations.filter((item) => item.organization_code !== "default_org");
+  return businessUnits.length ? businessUnits : topLevelOrganizations;
+}
+
+function getBusinessUnitCodeForOrganization(organizations, organizationCode) {
+  const path = getOrganizationAncestorCodes(organizations, organizationCode);
+  return path[path.length - 1] || "";
+}
+
 function getFilteredOrganizations(organizations) {
   const { query, scope } = getOrganizationDirectoryFilterState();
   const selectedCode = getSelectedOrganizationCode();
+  const businessUnitCode = getSelectedBusinessUnitCode();
 
-  let scopedItems = organizations;
+  let scopedItems =
+    businessUnitCode && scope !== "top_level"
+      ? organizations.filter((item) =>
+          getOrganizationDescendantCodes(organizations, businessUnitCode).includes(item.organization_code),
+        )
+      : organizations;
+
   if (scope === "top_level") {
     scopedItems = organizations.filter((item) => !item.parent_organization_code);
   } else if (scope === "selected_subtree" && selectedCode) {
@@ -1633,7 +1812,9 @@ function renderOrganizationSelectionState() {
   const organizations = organizationAdminState.organizations;
   const workforceItems = organizationAdminState.workforce;
   const selectedCode = getSelectedOrganizationCode();
+  const businessUnitCode = getSelectedBusinessUnitCode();
   const selected = getOrganizationByCode(organizations, selectedCode);
+  const businessUnit = getOrganizationByCode(organizations, businessUnitCode);
 
   const banner = document.getElementById("organization-selected-banner");
   if (banner) {
@@ -1649,9 +1830,9 @@ function renderOrganizationSelectionState() {
       ).length;
       banner.innerHTML = `<div class="status-chip ok">현재 선택: ${escapeHtml(
         selected.organization_name,
-      )}</div><p>${escapeHtml(path)} · 코드 ${escapeHtml(
+      )}</div><p>${businessUnit ? `사업부 ${escapeHtml(businessUnit.organization_name)} · ` : ""}${escapeHtml(path)} · 코드 ${escapeHtml(
         selected.organization_code,
-      )} · 직속 활성 구성원 ${escapeHtml(String(directMembers))}명</p>`;
+      )} · 직속 구성원 ${escapeHtml(String(directMembers))}명</p>`;
     }
   }
 
@@ -1659,28 +1840,456 @@ function renderOrganizationSelectionState() {
   organizationRows.forEach((row) => {
     row.classList.toggle("active-row", row.dataset.organizationCode === selectedCode);
   });
+
+}
+
+function renderBusinessUnitTabs(organizations, workforceItems) {
+  const target = document.getElementById("organization-division-tabs");
+  if (!target) return;
+
+  const topLevelOrganizations = getTopLevelOrganizations(organizations);
+  const selectedBusinessUnitCode =
+    getSelectedBusinessUnitCode() || topLevelOrganizations[0]?.organization_code || "";
+
+  if (!topLevelOrganizations.length) {
+    target.innerHTML = `<div class="empty-state">표시할 최상위 사업부가 없습니다.</div>`;
+    return;
+  }
+
+  target.innerHTML = topLevelOrganizations
+    .map((item) => {
+      const subtreeCodes = getOrganizationDescendantCodes(organizations, item.organization_code);
+      const activeMembers = workforceItems.filter(
+        (member) =>
+          subtreeCodes.includes(member.primary_organization_code) &&
+          member.employment_status !== "inactive",
+      ).length;
+
+      return `<button class="org-division-tab${
+        selectedBusinessUnitCode === item.organization_code ? " active" : ""
+      }" type="button" data-business-unit-code="${escapeHtml(item.organization_code)}"><strong>${escapeHtml(
+        item.organization_name,
+      )}</strong><small>${escapeHtml(item.organization_code)} · 하위 ${escapeHtml(
+        String(Math.max(subtreeCodes.length - 1, 0)),
+      )}개 조직 · ${escapeHtml(String(activeMembers))}명</small></button>`;
+    })
+    .join("");
+}
+
+function renderOrganizationPyramidTree(targetId, organizations, workforceItems, rootCode) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+
+  if (!organizations.length || !rootCode) {
+    target.innerHTML = `<div class="empty-state">표시할 조직 트리가 없습니다.</div>`;
+    return;
+  }
+
+  const root = getOrganizationByCode(organizations, rootCode);
+  if (!root) {
+    target.innerHTML = `<div class="empty-state">선택한 사업부 트리를 만들 수 없습니다.</div>`;
+    return;
+  }
+
+  const subtreeCodes = new Set(getOrganizationDescendantCodes(organizations, rootCode));
+  const scopedOrganizations = organizations.filter((item) => subtreeCodes.has(item.organization_code));
+  const selectedCode = getSelectedOrganizationCode();
+  const activePathCodes = new Set(
+    selectedCode ? getOrganizationAncestorCodes(organizations, selectedCode) : [],
+  );
+  const memberCountByOrganization = new Map();
+  workforceItems.forEach((item) => {
+    memberCountByOrganization.set(
+      item.primary_organization_code,
+      (memberCountByOrganization.get(item.primary_organization_code) || 0) + 1,
+    );
+  });
+  const pyramidModel = buildOrganizationPyramidModel(root, scopedOrganizations);
+
+  target.innerHTML = `<div class="org-pyramid-tree">${renderOrganizationPyramidNode(
+    pyramidModel,
+    selectedCode,
+    activePathCodes,
+    memberCountByOrganization,
+    scopedOrganizations,
+  )}</div>`;
+  softenOrganizationPyramidMargins(target);
+}
+
+function softenOrganizationPyramidMargins(target) {
+  const panel = target;
+  const tree = panel?.querySelector(".org-pyramid-tree");
+  if (!panel || !tree) return;
+
+  tree.style.setProperty("--org-pyramid-shift-x", "0px");
+  const cards = [...panel.querySelectorAll(".org-pyramid-card")];
+  if (!cards.length) return;
+
+  const panelRect = panel.getBoundingClientRect();
+  const leftMost = Math.min(...cards.map((card) => card.getBoundingClientRect().left));
+  const rightMost = Math.max(...cards.map((card) => card.getBoundingClientRect().right));
+  const leftGap = leftMost - panelRect.left;
+  const rightGap = panelRect.right - rightMost;
+  const delta = Math.round((leftGap - rightGap) / 4);
+
+  if (Math.abs(delta) < 2) return;
+  tree.style.setProperty("--org-pyramid-shift-x", `${-delta}px`);
+}
+
+const ORG_PYRAMID_CARD_WIDTH = 204;
+const ORG_PYRAMID_SLOT_PADDING_X = 13;
+const ORG_PYRAMID_BASE_WIDTH = ORG_PYRAMID_CARD_WIDTH + ORG_PYRAMID_SLOT_PADDING_X * 2;
+const ORGANIZATION_TYPE_OPTIONS = [
+  { value: "business_unit", label: "사업부", prefix: "biz" },
+  { value: "team", label: "팀", prefix: "team" },
+  { value: "group", label: "그룹", prefix: "group" },
+  { value: "part", label: "파트", prefix: "part" },
+];
+
+function getOrganizationTypeConfig(type) {
+  return (
+    ORGANIZATION_TYPE_OPTIONS.find((item) => item.value === type) ||
+    ORGANIZATION_TYPE_OPTIONS[ORGANIZATION_TYPE_OPTIONS.length - 1]
+  );
+}
+
+function getDefaultChildOrganizationType(organizations, parentCode) {
+  const depth = getOrganizationDepthMap(organizations).get(parentCode) || 0;
+  if (depth <= 0) return "team";
+  if (depth === 1) return "group";
+  return "part";
+}
+
+function normalizeOrganizationKey(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function buildOrganizationCodeFromDraft(type, key) {
+  const normalizedKey = normalizeOrganizationKey(key);
+  const config = getOrganizationTypeConfig(type);
+  if (!normalizedKey) return "";
+  return normalizedKey.startsWith(`${config.prefix}_`)
+    ? normalizedKey
+    : `${config.prefix}_${normalizedKey}`;
+}
+
+function resetOrganizationTreeDraft() {
+  organizationTreeUiState.draftParentCode = "";
+  organizationTreeUiState.draftType = "team";
+  organizationTreeUiState.draftName = "";
+  organizationTreeUiState.draftKey = "";
+}
+
+function resetOrganizationTreeInlineEdit() {
+  organizationTreeUiState.editTargetCode = "";
+  organizationTreeUiState.editName = "";
+  organizationTreeUiState.editParentCode = "";
+  organizationTreeUiState.editStatus = "active";
+  organizationTreeUiState.editEffectiveFrom = "";
+  organizationTreeUiState.editEffectiveTo = "";
+}
+
+function openOrganizationDraftUnderParent(record) {
+  resetOrganizationTreeInlineEdit();
+  organizationTreeUiState.draftParentCode = record.organization_code;
+  organizationTreeUiState.draftType = getDefaultChildOrganizationType(
+    organizationAdminState.organizations,
+    record.organization_code,
+  );
+  organizationTreeUiState.draftName = "";
+  organizationTreeUiState.draftKey = "";
+  renderOrganizationDirectoryAndTree();
+}
+
+function openOrganizationInlineEdit(record) {
+  if (!record) return;
+  resetOrganizationTreeDraft();
+  organizationTreeUiState.editTargetCode = record.organization_code;
+  organizationTreeUiState.editName = record.organization_name || "";
+  organizationTreeUiState.editParentCode = record.parent_organization_code || "";
+  organizationTreeUiState.editStatus = record.organization_status || "active";
+  organizationTreeUiState.editEffectiveFrom = record.effective_from || "";
+  organizationTreeUiState.editEffectiveTo = record.effective_to || "";
+  renderOrganizationDirectoryAndTree();
+}
+
+function closeOrganizationDeleteModal() {
+  organizationTreeUiState.deleteTargetCode = "";
+  document.getElementById("organization-delete-modal")?.setAttribute("hidden", "");
+}
+
+function openOrganizationDeleteModal(record) {
+  const copy = document.getElementById("organization-delete-modal-copy");
+  const status = document.getElementById("organization-delete-modal-status");
+  const directMembers = organizationAdminState.workforce.filter(
+    (item) =>
+      item.primary_organization_code === record.organization_code && item.employment_status !== "inactive",
+  ).length;
+  organizationTreeUiState.deleteTargetCode = record.organization_code;
+  if (copy) {
+    copy.textContent = `${record.organization_name} (${record.organization_code}) 을 삭제합니다. 직속 구성원 ${directMembers}명은 조직 미배정 상태로 전환됩니다.`;
+  }
+  if (status) {
+    status.textContent = "삭제를 진행할지 확인하세요.";
+  }
+  document.getElementById("organization-delete-modal")?.removeAttribute("hidden");
+}
+
+function closeOrganizationDetailModal() {
+  organizationTreeUiState.detailTargetCode = "";
+  organizationTreeUiState.detailMode = "create";
+  document.getElementById("organization-detail-modal")?.setAttribute("hidden", "");
+}
+
+function openOrganizationDetailModal(record, options = {}) {
+  const codeInput = document.getElementById("organization-detail-code-input");
+  const nameInput = document.getElementById("organization-detail-name-input");
+  const parentInput = document.getElementById("organization-detail-parent-input");
+  const statusInput = document.getElementById("organization-detail-status-input");
+  const effectiveFromInput = document.getElementById("organization-detail-effective-from-input");
+  const effectiveToInput = document.getElementById("organization-detail-effective-to-input");
+  const title = document.getElementById("organization-detail-modal-title");
+  const subtitle = document.getElementById("organization-detail-modal-subtitle");
+  const saveButton = document.getElementById("organization-detail-save-button");
+  const copy = document.getElementById("organization-detail-modal-copy");
+  const status = document.getElementById("organization-detail-modal-status");
+  if (!record) return;
+
+  const mode = options.mode === "edit" ? "edit" : "create";
+  organizationTreeUiState.detailTargetCode = record.organization_code;
+  organizationTreeUiState.detailMode = mode;
+  if (codeInput) codeInput.value = record.organization_code || "";
+  if (nameInput) nameInput.value = record.organization_name || "";
+  if (parentInput) parentInput.value = record.parent_organization_code || "";
+  if (statusInput) statusInput.value = record.organization_status || "active";
+  if (effectiveFromInput) effectiveFromInput.value = record.effective_from || "";
+  if (effectiveToInput) effectiveToInput.value = record.effective_to || "";
+  if (title) {
+    title.textContent = mode === "edit" ? "조직 수정" : "신규 조직 상세 작성";
+  }
+  if (subtitle) {
+    subtitle.textContent = mode === "edit" ? "Edit Organization Details" : "Complete Details After Basic Create";
+  }
+  if (saveButton) {
+    saveButton.textContent = mode === "edit" ? "수정 저장" : "상세 저장";
+  }
+  if (copy) {
+    copy.textContent =
+      mode === "edit"
+        ? `${record.organization_name} 정보를 이 다이얼로그에서 바로 수정합니다.`
+        : `${record.organization_name} 기본 생성이 끝났습니다. 상태와 유효 기간을 이어서 보완할 수 있습니다.`;
+  }
+  if (status) {
+    status.textContent = mode === "edit" ? "수정할 값을 확인한 뒤 저장하세요." : "상세 정보 저장 전입니다.";
+  }
+  document.getElementById("organization-detail-modal")?.removeAttribute("hidden");
+}
+
+function renderOrganizationDraftCard(parentRecord) {
+  const previewCode = buildOrganizationCodeFromDraft(
+    organizationTreeUiState.draftType,
+    organizationTreeUiState.draftKey,
+  );
+  return `<div class="org-pyramid-draft-card"><strong>${escapeHtml(
+    parentRecord.organization_name,
+  )} 아래 새 조직</strong><label class="org-draft-field"><span>타입</span><select class="control-input" data-org-draft-field="type">${ORGANIZATION_TYPE_OPTIONS.map(
+    (item) =>
+      `<option value="${escapeHtml(item.value)}"${
+        item.value === organizationTreeUiState.draftType ? " selected" : ""
+      }>${escapeHtml(item.label)}</option>`,
+  ).join("")}</select></label><label class="org-draft-field"><span>이름</span><input class="control-input" type="text" value="${escapeHtml(
+    organizationTreeUiState.draftName,
+  )}" placeholder="예: 데이터서비스파트" data-org-draft-field="name" /></label><label class="org-draft-field"><span>키</span><input class="control-input" type="text" value="${escapeHtml(
+    organizationTreeUiState.draftKey,
+  )}" placeholder="예: data_service" data-org-draft-field="key" /></label><p class="org-pyramid-draft-hint">생성 코드: <span class="mono">${escapeHtml(
+    previewCode || "입력 대기",
+  )}</span></p><div class="org-pyramid-draft-actions"><button class="control-button secondary" type="button" data-org-draft-action="cancel">취소</button><button class="control-button" type="button" data-org-draft-action="create">생성</button></div></div>`;
+}
+
+function renderOrganizationInlineEditCard(record) {
+  return `<div class="org-pyramid-draft-card org-pyramid-inline-editor"><strong>${escapeHtml(
+    record.organization_name,
+  )} 수정</strong><label class="org-draft-field"><span>이름</span><input class="control-input" type="text" value="${escapeHtml(
+    organizationTreeUiState.editName,
+  )}" placeholder="예: 데이터서비스파트" data-org-edit-field="name" /></label><label class="org-draft-field"><span>상위 조직 코드</span><input class="control-input" type="text" value="${escapeHtml(
+    organizationTreeUiState.editParentCode,
+  )}" placeholder="없으면 비워둠" data-org-edit-field="parent" /></label><label class="org-draft-field"><span>상태</span><select class="control-input" data-org-edit-field="status"><option value="active"${
+    organizationTreeUiState.editStatus === "active" ? " selected" : ""
+  }>active</option><option value="inactive"${
+    organizationTreeUiState.editStatus === "inactive" ? " selected" : ""
+  }>inactive</option></select></label><label class="org-draft-field"><span>유효 시작</span><input class="control-input" type="text" value="${escapeHtml(
+    organizationTreeUiState.editEffectiveFrom,
+  )}" placeholder="2026-04-09T00:00:00Z" data-org-edit-field="effective-from" /></label><label class="org-draft-field"><span>유효 종료</span><input class="control-input" type="text" value="${escapeHtml(
+    organizationTreeUiState.editEffectiveTo,
+  )}" placeholder="2026-12-31T00:00:00Z" data-org-edit-field="effective-to" /></label><div class="org-pyramid-draft-actions"><button class="control-button secondary" type="button" data-org-edit-action="cancel">취소</button><button class="control-button" type="button" data-org-edit-action="save" data-organization-code="${escapeHtml(
+    record.organization_code,
+  )}">저장</button></div></div>`;
+}
+
+function refreshOrganizationDraftHint() {
+  const hint = document.querySelector(".org-pyramid-draft-hint .mono");
+  if (!hint) return;
+  hint.textContent =
+    buildOrganizationCodeFromDraft(
+      organizationTreeUiState.draftType,
+      organizationTreeUiState.draftKey,
+    ) || "입력 대기";
+}
+
+function renderOrganizationPyramidCard(
+  item,
+  depth,
+  selectedCode,
+  activePathCodes,
+  memberCountByOrganization,
+  scopedOrganizations,
+) {
+  const memberCount = memberCountByOrganization.get(item.organization_code) || 0;
+  const directChildren = scopedOrganizations.filter(
+    (candidate) => candidate.parent_organization_code === item.organization_code,
+  ).length;
+  const isSelected = selectedCode === item.organization_code;
+  const canReviewDelete = directChildren === 0;
+  const isEditing = organizationTreeUiState.editTargetCode === item.organization_code;
+  const isDrafting = organizationTreeUiState.draftParentCode === item.organization_code;
+  const draftCard = isDrafting ? renderOrganizationDraftCard(item) : "";
+  if (isEditing) {
+    return `<div class="org-pyramid-card-shell${isSelected ? " selected" : ""} editing">${renderOrganizationInlineEditCard(
+      item,
+    )}${draftCard}</div>`;
+  }
+
+  return `<div class="org-pyramid-card-shell${isSelected ? " selected" : ""}"><button class="org-pyramid-card${
+    isSelected ? " active" : ""
+  }${
+    !isSelected && activePathCodes.has(item.organization_code) ? " path-active" : ""
+  }" type="button" data-organization-code="${escapeHtml(
+    item.organization_code,
+  )}" data-organization-name="${escapeHtml(item.organization_name)}" data-parent-organization-code="${escapeHtml(
+    item.parent_organization_code || "",
+  )}" data-organization-status="${escapeHtml(item.organization_status)}" data-effective-from="${escapeHtml(
+    item.effective_from || "",
+  )}" data-effective-to="${escapeHtml(item.effective_to || "")}"><span class="status-chip">${
+    depth === 0 ? "사업부" : getOrganizationLevelLabel(depth)
+  }</span><strong>${escapeHtml(item.organization_name)}</strong><small>${escapeHtml(
+    item.organization_code,
+  )} · 직속 ${escapeHtml(String(memberCount))}명 · 하위 ${escapeHtml(String(directChildren))}개</small></button>${
+    isSelected
+      ? `<div class="org-pyramid-card-actions"><button class="org-pyramid-card-action text-action" type="button" title="조직 수정" aria-label="조직 수정" data-tree-card-action="edit" data-organization-code="${escapeHtml(
+          item.organization_code,
+        )}">수정</button><div class="org-pyramid-card-icon-actions"><button class="org-pyramid-card-action" type="button" title="하위 조직 추가" aria-label="하위 조직 추가" data-tree-card-action="add-child" data-organization-code="${escapeHtml(
+          item.organization_code,
+        )}">+</button><button class="org-pyramid-card-action" type="button" title="삭제 검토" aria-label="삭제 검토" data-tree-card-action="review-delete" data-organization-code="${escapeHtml(
+          item.organization_code,
+        )}"${canReviewDelete ? "" : " disabled"}>-</button></div></div>`
+      : ""
+  }${draftCard}</div>`;
+}
+
+function buildOrganizationPyramidModel(item, scopedOrganizations, depth = 0) {
+  const childItems = scopedOrganizations
+    .filter((candidate) => candidate.parent_organization_code === item.organization_code)
+    .sort((left, right) => left.organization_code.localeCompare(right.organization_code));
+  const children = childItems.map((child) => buildOrganizationPyramidModel(child, scopedOrganizations, depth + 1));
+
+  if (!children.length) {
+    return {
+      item,
+      depth,
+      children,
+      leafGridColumns: 0,
+      slotWidth: ORG_PYRAMID_BASE_WIDTH,
+      subtreeWidth: ORG_PYRAMID_BASE_WIDTH,
+    };
+  }
+
+  const canUseLeafGrid = children.length >= 3 && children.every((child) => child.children.length === 0);
+  const leafGridColumns = canUseLeafGrid ? 2 : 0;
+
+  const slotWidth = Math.max(
+    ORG_PYRAMID_BASE_WIDTH,
+    ...children.map((child) => child.subtreeWidth),
+  );
+  const subtreeWidth = slotWidth * (leafGridColumns ? Math.min(leafGridColumns, children.length) : children.length);
+
+  return {
+    item,
+    depth,
+    children,
+    leafGridColumns,
+    slotWidth,
+    subtreeWidth,
+  };
+}
+
+function renderOrganizationPyramidNode(
+  model,
+  selectedCode,
+  activePathCodes,
+  memberCountByOrganization,
+  scopedOrganizations,
+) {
+  const { item, depth, children, subtreeWidth, slotWidth, leafGridColumns } = model;
+  return `<div class="org-pyramid-node" data-depth="${escapeHtml(
+    String(depth),
+  )}" style="--org-pyramid-node-width:${escapeHtml(
+    `${subtreeWidth}px`,
+  )};"><div class="org-pyramid-node-card">${renderOrganizationPyramidCard(
+    item,
+    depth,
+    selectedCode,
+    activePathCodes,
+    memberCountByOrganization,
+    scopedOrganizations,
+  )}</div>${
+    children.length
+      ? `<div class="org-pyramid-node-children${
+          children.length === 1 ? " single-child" : ""
+        }${
+          leafGridColumns ? " leaf-grid" : ""
+        }" style="--org-pyramid-slot-width:${escapeHtml(`${slotWidth}px`)};${leafGridColumns ? `--org-pyramid-leaf-columns:${escapeHtml(String(leafGridColumns))};` : ""}">${children
+          .map((child) =>
+            `<div class="org-pyramid-child" style="--org-pyramid-slot-width:${escapeHtml(
+              `${slotWidth}px`,
+            )};">${renderOrganizationPyramidNode(
+              child,
+              selectedCode,
+              activePathCodes,
+              memberCountByOrganization,
+              scopedOrganizations,
+            )}</div>`,
+          )
+          .join("")}</div>`
+      : ""
+  }</div>`;
 }
 
 function renderOrganizationDirectoryAndTree() {
   const organizations = organizationAdminState.organizations;
   const workforceItems = organizationAdminState.workforce;
+  const topLevelOrganizations = getTopLevelOrganizations(organizations);
+  let businessUnitCode = getSelectedBusinessUnitCode();
+  if (!businessUnitCode || !getOrganizationByCode(organizations, businessUnitCode)) {
+    businessUnitCode =
+      getBusinessUnitCodeForOrganization(organizations, getSelectedOrganizationCode()) ||
+      topLevelOrganizations[0]?.organization_code ||
+      "";
+    setSelectedBusinessUnitCode(businessUnitCode);
+  }
   const filteredOrganizations = getFilteredOrganizations(organizations);
   const { scope, query } = getOrganizationDirectoryFilterState();
-  const topLevelCount = filteredOrganizations.filter((item) => !item.parent_organization_code).length;
+  const businessUnit = getOrganizationByCode(organizations, businessUnitCode);
 
   setMetricBlock("organization-admin-metrics", [
-    { label: "활성 조직", value: `${filteredOrganizations.length}/${organizations.length}개` },
-    { label: "최상위 조직", value: `${topLevelCount}개` },
+    { label: "조직", value: `${filteredOrganizations.length}/${organizations.length}개` },
+    { label: "선택 사업부", value: businessUnit ? businessUnit.organization_name : "-" },
     {
       label: "현재 필터",
-      value:
-        scope === "top_level"
-          ? "최상위"
-          : scope === "selected_subtree"
-            ? "선택 하위"
-            : query
-              ? "검색 결과"
-              : "전체",
+      value: scope === "top_level" ? "최상위" : scope === "selected_subtree" ? "선택 하위" : query ? "검색 결과" : "사업부 전체",
     },
   ]);
 
@@ -1698,27 +2307,32 @@ function renderOrganizationDirectoryAndTree() {
           item.effective_to || "",
         )}"><td class="mono">${escapeHtml(item.organization_code)}</td><td>${escapeHtml(
           item.organization_name,
-        )}</td><td>${escapeHtml(item.organization_status)}</td></tr>`,
+        )}</td><td><div class="table-cell-action"><span>${escapeHtml(
+          item.organization_status,
+        )}</span><button class="table-inline-action" type="button">개편</button></div></td></tr>`,
     ),
-    query ? "검색 조건에 맞는 조직이 없습니다." : "활성 조직이 없습니다.",
+    query ? "검색 조건에 맞는 조직이 없습니다." : "조직이 없습니다.",
   );
 
-  renderOrganizationTree("organization-tree-panel", filteredOrganizations, workforceItems);
+  renderBusinessUnitTabs(organizations, workforceItems);
+  renderOrganizationPyramidTree("organization-tree-panel", filteredOrganizations, workforceItems, businessUnitCode);
   renderOrganizationSelectionState();
-  renderOrganizationFilterSummary(filteredOrganizations.length, organizations.length, scope, query);
+  renderOrganizationFilterSummary(filteredOrganizations.length, organizations.length, scope, query, businessUnit);
 }
 
-function renderOrganizationFilterSummary(filteredCount, totalCount, scope, query) {
+function renderOrganizationFilterSummary(filteredCount, totalCount, scope, query, businessUnit) {
   const target = document.getElementById("organization-filter-summary");
   if (!target) return;
 
   const scopeLabel =
-    scope === "top_level" ? "최상위 조직만" : scope === "selected_subtree" ? "선택 조직 하위만" : "전체 조직";
+    scope === "top_level" ? "최상위 사업부만" : scope === "selected_subtree" ? "선택 조직 하위만" : "선택 사업부 전체";
   const queryLabel = query ? `검색어 "${query}" 적용` : "검색어 없음";
 
   target.innerHTML = `<span class="status-chip ok">표시 ${escapeHtml(String(filteredCount))}/${escapeHtml(
     String(totalCount),
-  )}</span><p>${escapeHtml(scopeLabel)} · ${escapeHtml(queryLabel)}</p>`;
+  )}</span><p>${escapeHtml(scopeLabel)} · ${escapeHtml(queryLabel)}${
+    businessUnit ? ` · 사업부 ${escapeHtml(businessUnit.organization_name)}` : ""
+  }</p>`;
 }
 
 function getFilteredWorkforceItems(items) {
@@ -1735,6 +2349,11 @@ function renderWorkforceAdminView() {
   const organizationCode = workforceAdminState.organizationCode;
   const items = workforceAdminState.items;
   const filteredItems = getFilteredWorkforceItems(items);
+  const assignedItems = filteredItems.filter((item) => item.primary_organization_code);
+  const scopedItems = assignedItems.filter(
+    (item) => !organizationCode || item.primary_organization_code === organizationCode,
+  );
+  const unassignedItems = filteredItems.filter((item) => !item.primary_organization_code);
   const selected = getSelectedWorkforceItem(filteredItems);
   const jobFamilies = new Set(
     filteredItems.map((item) => item.job_family).filter((item) => Boolean(item)),
@@ -1742,20 +2361,24 @@ function renderWorkforceAdminView() {
 
   setMetricBlock("workforce-admin-metrics", [
     { label: "조직 필터", value: organizationCode || "전체" },
-    { label: "활성 인력", value: `${filteredItems.length}/${items.length}명` },
-    { label: "직군 정보", value: `${jobFamilies}개` },
+    { label: "인력", value: `${filteredItems.length}/${items.length}명` },
+    { label: "미배정", value: `${unassignedItems.length}명` },
   ]);
-  if (!selected && filteredItems[0]) {
-    setSelectedWorkforceEmployeeNumber(filteredItems[0].employee_number);
+  if (!selected && (scopedItems[0] || unassignedItems[0])) {
+    setSelectedWorkforceEmployeeNumber((scopedItems[0] || unassignedItems[0]).employee_number);
   } else if (selected) {
     setSelectedWorkforceEmployeeNumber(selected.employee_number);
   }
   const activeSelected = getSelectedWorkforceItem(filteredItems);
 
-  renderBulletSummary("workforce-directory-summary", summarizeWorkforceDirectory(filteredItems, organizationCode), "조건에 맞는 인력이 없습니다.");
+  renderBulletSummary(
+    "workforce-directory-summary",
+    summarizeWorkforceDirectory(scopedItems, organizationCode),
+    "조건에 맞는 인력이 없습니다.",
+  );
   renderTableRows(
     "data-admin-workforce-body",
-    filteredItems.slice(0, 12).map(
+    scopedItems.slice(0, 12).map(
       (item) =>
         `<tr data-employee-number="${escapeHtml(item.employee_number)}" data-display-name="${escapeHtml(
           item.display_name,
@@ -1768,6 +2391,22 @@ function renderWorkforceAdminView() {
         )}</td><td>${escapeHtml(item.primary_organization_name || "미지정")}</td></tr>`,
     ),
     "조건에 맞는 인력이 없습니다.",
+  );
+  renderTableRows(
+    "data-admin-unassigned-workforce-body",
+    unassignedItems.slice(0, 12).map(
+      (item) =>
+        `<tr data-employee-number="${escapeHtml(item.employee_number)}" data-display-name="${escapeHtml(
+          item.display_name,
+        )}" data-primary-organization-code="" data-primary-organization-name="" data-employment-status="${escapeHtml(
+          item.employment_status,
+        )}" data-job-family="${escapeHtml(item.job_family || "")}" data-email="${escapeHtml(
+          item.email || "",
+        )}"><td class="mono">${escapeHtml(item.employee_number)}</td><td>${escapeHtml(
+          item.display_name,
+        )}</td><td>미배정</td></tr>`,
+    ),
+    "현재 미배정 인력이 없습니다.",
   );
   renderBulletSummary(
     "workforce-selected-summary",
@@ -1794,11 +2433,25 @@ function renderWorkforceAdminView() {
     summarizeWorkforceActionPreview(filteredItems),
     "액션 미리보기를 계산하지 못했습니다.",
   );
-  renderWorkforceFilterSummary(filteredItems.length, items.length, organizationCode, getWorkforceFilterState().query);
+  renderWorkforceFilterSummary(
+    scopedItems.length,
+    items.length,
+    organizationCode,
+    getWorkforceFilterState().query,
+    unassignedItems.length,
+    jobFamilies,
+  );
   renderWorkforceSelectionState(activeSelected);
 }
 
-function renderWorkforceFilterSummary(filteredCount, totalCount, organizationCode, query) {
+function renderWorkforceFilterSummary(
+  filteredCount,
+  totalCount,
+  organizationCode,
+  query,
+  unassignedCount,
+  jobFamilyCount,
+) {
   const target = document.getElementById("workforce-filter-summary");
   if (!target) return;
 
@@ -1806,7 +2459,9 @@ function renderWorkforceFilterSummary(filteredCount, totalCount, organizationCod
   const queryLabel = query ? `검색어 "${query}" 적용` : "검색어 없음";
   target.innerHTML = `<span class="status-chip ok">표시 ${escapeHtml(String(filteredCount))}/${escapeHtml(
     String(totalCount),
-  )}</span><p>${escapeHtml(orgLabel)} · ${escapeHtml(queryLabel)}</p>`;
+  )}</span><p>${escapeHtml(orgLabel)} · 미배정 ${escapeHtml(String(unassignedCount))}명 · 직군 ${escapeHtml(
+    String(jobFamilyCount),
+  )}개 · ${escapeHtml(queryLabel)}</p>`;
 }
 
 function renderWorkforceSelectionState(selected) {
@@ -1820,12 +2475,18 @@ function renderWorkforceSelectionState(selected) {
         selected.display_name,
       )}</div><p>${escapeHtml(selected.primary_organization_name || "미지정")} · 사번 ${escapeHtml(
         selected.employee_number,
-      )} · 재직 상태 ${escapeHtml(selected.employment_status)}</p>`;
+      )}${formatInactiveBadge(selected.employment_status)}</p>`;
     }
   }
 
   const workforceRows = document.querySelectorAll("#data-admin-workforce-body tr[data-employee-number]");
   workforceRows.forEach((row) => {
+    row.classList.toggle("active-row", row.dataset.employeeNumber === workforceAdminState.selectedEmployeeNumber);
+  });
+  const unassignedRows = document.querySelectorAll(
+    "#data-admin-unassigned-workforce-body tr[data-employee-number]",
+  );
+  unassignedRows.forEach((row) => {
     row.classList.toggle("active-row", row.dataset.employeeNumber === workforceAdminState.selectedEmployeeNumber);
   });
 }
@@ -1917,7 +2578,7 @@ function summarizeOrganizationActionPreview(organizations, workforceItems) {
     hierarchyBody = "최상위 조직으로 승격됩니다.";
   }
 
-  const deleteBlocked = activeChildren > 0 || activeDirectMembers > 0;
+  const deleteBlocked = activeChildren > 0;
   return [
     {
       title: "계층 변경 영향",
@@ -1926,12 +2587,12 @@ function summarizeOrganizationActionPreview(organizations, workforceItems) {
     {
       title: "삭제 가능 여부",
       body: deleteBlocked
-        ? `지금은 삭제 불가입니다. 직속 하위 조직 ${activeChildren}개, 직속 활성 구성원 ${activeDirectMembers}명이 남아 있습니다.`
-        : "직속 하위 조직과 직속 활성 구성원이 없어 삭제 가능합니다.",
+        ? `지금은 삭제 불가입니다. 직속 하위 조직 ${activeChildren}개가 남아 있습니다.`
+        : `직속 하위 조직이 없어 삭제 가능합니다. 직속 구성원 ${activeDirectMembers}명은 삭제 시 미배정 상태로 전환됩니다.`,
     },
     {
       title: "하위 포함 영향",
-      body: `현재 조직 포함 하위 ${descendantCodes.length}개 조직, 하위 포함 활성 구성원 ${activeSubtreeMembers}명에 영향을 줄 수 있습니다.`,
+      body: `현재 조직 포함 하위 ${descendantCodes.length}개 조직, 하위 포함 구성원 ${activeSubtreeMembers}명에 영향을 줄 수 있습니다.`,
     },
   ];
 }
@@ -1966,7 +2627,7 @@ function summarizeOrganizationMemberActionPreview(organizations, workforceItems)
     return [
       {
         title: "신규 구성원 등록 모드",
-        body: `${organizationCode} 에 새 구성원을 등록할 예정입니다. 현재 이 조직의 활성 직속 구성원은 ${currentDirectMembers}명입니다.`,
+        body: `${organizationCode} 에 새 구성원을 등록할 예정입니다. 현재 이 조직의 직속 구성원은 ${currentDirectMembers}명입니다.`,
       },
       {
         title: "초기 배치",
@@ -1981,7 +2642,7 @@ function summarizeOrganizationMemberActionPreview(organizations, workforceItems)
     return [
       {
         title: "비활성화 영향",
-        body: `${member.display_name} 을 비활성화하면 ${currentOrganization?.organization_name || organizationCode} 의 활성 직속 구성원이 ${Math.max(
+        body: `${member.display_name} 을 비활성화하면 ${currentOrganization?.organization_name || organizationCode} 의 직속 구성원이 ${Math.max(
           currentDirectMembers - (member.employment_status === "inactive" ? 0 : 1),
           0,
         )}명으로 줄어듭니다.`,
@@ -2004,10 +2665,10 @@ function summarizeOrganizationMemberActionPreview(organizations, workforceItems)
   } else if (!targetOrganization) {
     movementBody = "입력한 이동 대상 조직이 존재하지 않습니다.";
   } else {
-    movementBody = `${member.display_name} 을 ${targetOrganization.organization_name} 으로 이동하면 현재 조직 활성 인원은 ${Math.max(
+    movementBody = `${member.display_name} 을 ${targetOrganization.organization_name} 으로 이동하면 현재 조직 인원은 ${Math.max(
       currentDirectMembers - 1,
       0,
-    )}명, 대상 조직 활성 인원은 ${targetDirectMembers + 1}명이 됩니다.`;
+    )}명, 대상 조직 인원은 ${targetDirectMembers + 1}명이 됩니다.`;
   }
 
   return [
@@ -2017,7 +2678,9 @@ function summarizeOrganizationMemberActionPreview(organizations, workforceItems)
     },
     {
       title: "현재 소속",
-      body: `${member.primary_organization_name} · 재직 상태 ${member.employment_status} · 직군 ${member.job_family || "미지정"}`,
+      body: `${member.primary_organization_name || "미배정"}${formatInactiveBadge(
+        member.employment_status,
+      )} · 직군 ${member.job_family || "미지정"}`,
     },
     {
       title: "운영 체크",
@@ -2037,6 +2700,34 @@ function renderOrganizationAdminPreviews() {
     summarizeOrganizationMemberActionPreview(organizationAdminState.organizations, organizationAdminState.workforce),
     "구성원 영향 미리보기를 계산하지 못했습니다.",
   );
+}
+
+function prepareOrganizationCreateUnderParent(record) {
+  const codeInput = document.getElementById("organization-code-input");
+  const nameInput = document.getElementById("organization-name-input");
+  const parentInput = document.getElementById("organization-parent-input");
+  const statusInput = document.getElementById("organization-status-input");
+  const effectiveFromInput = document.getElementById("organization-effective-from-input");
+  const effectiveToInput = document.getElementById("organization-effective-to-input");
+  const status = document.getElementById("organization-action-status");
+
+  if (codeInput) codeInput.value = "";
+  if (nameInput) nameInput.value = "";
+  if (parentInput) parentInput.value = record.organization_code || "";
+  if (statusInput) statusInput.value = "active";
+  if (effectiveFromInput) effectiveFromInput.value = "";
+  if (effectiveToInput) effectiveToInput.value = "";
+  if (status) {
+    status.textContent = `${record.organization_name} 아래에 새 하위 조직을 추가할 준비가 됐습니다.`;
+  }
+  renderOrganizationAdminPreviews();
+}
+
+function setOrganizationActionStatusCopy(message) {
+  const status = document.getElementById("organization-action-status");
+  if (status) {
+    status.textContent = message;
+  }
 }
 
 function populateOrganizationForm(record) {
@@ -2060,7 +2751,17 @@ function populateOrganizationForm(record) {
 
 function syncOrganizationSelectionToWorkforce(record) {
   if (!record) return;
+  if (organizationTreeUiState.draftParentCode && organizationTreeUiState.draftParentCode !== record.organization_code) {
+    resetOrganizationTreeDraft();
+  }
   setSelectedOrganizationCode(record.organization_code);
+  const businessUnitCode = getBusinessUnitCodeForOrganization(
+    organizationAdminState.organizations,
+    record.organization_code,
+  );
+  if (businessUnitCode) {
+    setSelectedBusinessUnitCode(businessUnitCode);
+  }
   const filterInput = document.getElementById("organization-filter-input");
   const memberOrganizationInput = document.getElementById("member-organization-code-input");
   const organizationMemberOrganizationInput = document.getElementById(
@@ -2077,6 +2778,97 @@ function syncOrganizationSelectionToWorkforce(record) {
     renderOrganizationSelectionState();
   }
   renderOrganizationAdminPreviews();
+}
+
+async function createOrganizationFromTreeDraft(load) {
+  const baseUrl = getActiveApiBaseUrl();
+  const parentCode = organizationTreeUiState.draftParentCode;
+  const organizationName = organizationTreeUiState.draftName.trim();
+  const normalizedKey = normalizeOrganizationKey(organizationTreeUiState.draftKey);
+  const organizationCode = buildOrganizationCodeFromDraft(
+    organizationTreeUiState.draftType,
+    normalizedKey,
+  );
+  const parentRecord = getOrganizationByCode(organizationAdminState.organizations, parentCode);
+
+  if (!parentRecord) {
+    setOrganizationActionStatusCopy("하위 조직을 붙일 상위 조직을 다시 선택하세요.");
+    return;
+  }
+  if (!organizationName || !normalizedKey || !organizationCode) {
+    setOrganizationActionStatusCopy("타입, 이름, 키를 모두 입력해야 새 조직을 만들 수 있습니다.");
+    return;
+  }
+  if (getOrganizationByCode(organizationAdminState.organizations, organizationCode)) {
+    setOrganizationActionStatusCopy(`이미 존재하는 조직 코드입니다: ${organizationCode}`);
+    return;
+  }
+
+  setOrganizationActionStatusCopy(`${parentRecord.organization_name} 아래에 ${organizationCode} 생성 중입니다.`);
+  await sendJson(baseUrl, "admin/master-data/organizations", "POST", {
+    organization_code: organizationCode,
+    organization_name: organizationName,
+    parent_organization_code: parentCode,
+    organization_status: "active",
+    effective_from: null,
+    effective_to: null,
+  });
+  setSelectedOrganizationCode(organizationCode);
+  resetOrganizationTreeDraft();
+  await load();
+  const created = getOrganizationByCode(organizationAdminState.organizations, organizationCode);
+  if (created) {
+    populateOrganizationForm(created);
+    openOrganizationInlineEdit(created);
+  }
+  setOrganizationActionStatusCopy(`조직 ${organizationCode} 기본 생성이 완료되었습니다. 카드 아래에서 이어서 보완하세요.`);
+}
+
+async function saveOrganizationFromInlineEdit(load) {
+  const baseUrl = getActiveApiBaseUrl();
+  const organizationCode = organizationTreeUiState.editTargetCode;
+  const organizationName = organizationTreeUiState.editName.trim();
+  const parentOrganizationCode = organizationTreeUiState.editParentCode.trim();
+  const organizationStatus = organizationTreeUiState.editStatus.trim();
+  const effectiveFrom = organizationTreeUiState.editEffectiveFrom.trim();
+  const effectiveTo = organizationTreeUiState.editEffectiveTo.trim();
+
+  if (!organizationCode || !organizationName || !organizationStatus) {
+    setOrganizationActionStatusCopy("조직명과 상태를 입력한 뒤 저장하세요.");
+    return;
+  }
+
+  setOrganizationActionStatusCopy(`조직 ${organizationCode} 수정 저장 중입니다.`);
+  await sendJson(baseUrl, `admin/master-data/organizations/${organizationCode}`, "PATCH", {
+    organization_name: organizationName,
+    parent_organization_code: parentOrganizationCode || null,
+    organization_status: organizationStatus,
+    effective_from: effectiveFrom || null,
+    effective_to: effectiveTo || null,
+  });
+  resetOrganizationTreeInlineEdit();
+  await load();
+  setSelectedOrganizationCode(organizationCode);
+  setOrganizationActionStatusCopy(`조직 ${organizationCode} 수정이 완료되었습니다.`);
+}
+
+async function deleteOrganizationFromTree(load) {
+  const baseUrl = getActiveApiBaseUrl();
+  const organizationCode = organizationTreeUiState.deleteTargetCode;
+  if (!organizationCode) return;
+  const record = getOrganizationByCode(organizationAdminState.organizations, organizationCode);
+  if (!record) {
+    closeOrganizationDeleteModal();
+    return;
+  }
+
+  await sendJson(baseUrl, `admin/master-data/organizations/${organizationCode}`, "DELETE");
+  closeOrganizationDeleteModal();
+  if (getSelectedOrganizationCode() === organizationCode) {
+    setSelectedOrganizationCode(record.parent_organization_code || "");
+  }
+  await load();
+  setOrganizationActionStatusCopy(`조직 ${organizationCode} 삭제가 완료되었습니다.`);
 }
 
 function populateOrganizationMemberForm(record, organizationCode) {
@@ -2186,16 +2978,12 @@ function summarizeSelectedOrganization(organizations, workforceItems, organizati
 
   return [
     {
-      title: `${selected.organization_name} (${selected.organization_code})`,
-      body: `상위 조직 ${selected.parent_organization_code || "없음"} · 상태 ${selected.organization_status}`,
-    },
-    {
-      title: "하위 구조",
-      body: `자기 포함 ${descendantCodes.length}개 조직이 연결되어 있습니다.`,
+      title: "연결 범위",
+      body: `상위 ${selected.parent_organization_code || "없음"} · 하위 포함 ${descendantCodes.length}개 조직`,
     },
     {
       title: "구성원 범위",
-      body: `직속 구성원 ${directMembers}명 · 하위 포함 ${descendantMembers}명입니다.`,
+      body: `직속 ${directMembers}명 · 하위 포함 ${descendantMembers}명`,
     },
   ];
 }
@@ -2214,16 +3002,12 @@ function summarizeOrganizationStructure(snapshot) {
 
   return [
     {
-      title: `${snapshot.organization_name} (${snapshot.organization_code})`,
-      body: `상위 경로 ${ancestorPath} · 상태 ${snapshot.organization_status}`,
+      title: "현재 위치",
+      body: `${ancestorPath} · 상태 ${snapshot.organization_status}`,
     },
     {
-      title: "직속 하위 조직",
-      body: `${snapshot.children.length}개 · ${childCodes}`,
-    },
-    {
-      title: "조직 범위",
-      body: `하위 포함 ${snapshot.subtree_organization_count}개 조직 · 직속 구성원 ${snapshot.direct_member_count}명 · 하위 포함 활성 구성원 ${snapshot.subtree_active_member_count}명`,
+      title: "바로 영향을 받는 범위",
+      body: `직속 하위 ${snapshot.children.length}개 · 직속 구성원 ${snapshot.direct_member_count}명 · 하위 포함 ${snapshot.subtree_active_member_count}명`,
     },
   ];
 }
@@ -2240,11 +3024,7 @@ function summarizeDirectMembers(workforceItems, organizationCode) {
   return [
     {
       title: `직속 구성원 ${directMembers.length}명`,
-      body: `${organizationCode} 기준으로 인력 관리 화면과 바로 연결할 수 있습니다.`,
-    },
-    {
-      title: "빠른 이동",
-      body: "인력 관리 화면에서 같은 조직 코드를 필터로 열면 바로 이어서 수정할 수 있습니다.",
+      body: `${organizationCode} 기준으로 바로 이동 또는 제거 작업을 시작할 수 있습니다.`,
     },
     {
       title: "대표 직군",
@@ -2591,12 +3371,20 @@ async function loadOrganizationsAdminLiveData() {
     const organizationItems = organizations?.items || [];
     const workforceItems = workforce?.items || [];
     const selectedCode = getSelectedOrganizationCode() || organizationItems[0]?.organization_code || "";
+    const selectedRecord =
+      organizationItems.find((item) => item.organization_code === selectedCode) || organizationItems[0] || null;
+    const effectiveSelectedCode = selectedRecord?.organization_code || "";
+    let organizationStructure = null;
+    if (effectiveSelectedCode) {
+      const structureResponse = await fetchJson(
+        baseUrl,
+        `admin/master-data/organizations/${effectiveSelectedCode}/structure`,
+      );
+      organizationStructure = structureResponse?.item || null;
+    }
     renderBulletSummary(
       "data-admin-organization-detail",
-      organizationItems.slice(0, 3).map((item) => ({
-        title: `${item.organization_name} (${item.organization_code})`,
-        body: `상위 조직 ${item.parent_organization_code || "없음"} · 유효 시작 ${item.effective_from || "-"} · 유효 종료 ${item.effective_to || "-"}`,
-      })),
+      summarizeOrganizationProfile(selectedRecord, organizationStructure, workforceItems),
       "조직 상세 정보가 없습니다.",
     );
     renderBulletSummary(
@@ -2609,25 +3397,17 @@ async function loadOrganizationsAdminLiveData() {
       summarizeOrganizationImpact(organizationItems),
       "영향 범위가 없습니다.",
     );
-    let organizationStructure = null;
-    if (selectedCode) {
-      const structureResponse = await fetchJson(
-        baseUrl,
-        `admin/master-data/organizations/${selectedCode}/structure`,
-      );
-      organizationStructure = structureResponse?.item || null;
-    }
     renderBulletSummary(
       "organization-tree-summary",
       organizationStructure
         ? summarizeOrganizationStructure(organizationStructure)
-        : summarizeSelectedOrganization(organizationItems, workforceItems, selectedCode),
+        : summarizeSelectedOrganization(organizationItems, workforceItems, effectiveSelectedCode),
       "선택 조직 요약이 없습니다.",
     );
     renderTableRows(
       "organization-direct-members-body",
       workforceItems
-        .filter((item) => item.primary_organization_code === selectedCode)
+        .filter((item) => item.primary_organization_code === effectiveSelectedCode)
         .slice(0, 8)
         .map(
           (item) =>
@@ -2639,23 +3419,35 @@ async function loadOrganizationsAdminLiveData() {
               item.email || "",
             )}"><td class="mono">${escapeHtml(item.employee_number)}</td><td>${escapeHtml(
               item.display_name,
-            )}</td><td>${escapeHtml(item.job_family || "미지정")}</td></tr>`,
+            )}</td><td><div class="table-cell-action"><span>${escapeHtml(
+              item.job_family || "미지정",
+            )}</span><button class="table-inline-action" type="button">배치</button></div></td></tr>`,
         ),
       "선택 조직의 직속 구성원이 없습니다.",
     );
     renderOrganizationSelectionState();
     renderBulletSummary(
       "organization-direct-members-summary",
-      summarizeDirectMembers(workforceItems, selectedCode),
+      summarizeDirectMembers(workforceItems, effectiveSelectedCode),
       "조직-인력 연결 요약이 없습니다.",
+    );
+    renderBulletSummary(
+      "organization-next-actions",
+      summarizeOrganizationTaskOptions(organizationStructure, workforceItems),
+      "시작할 작업 후보가 없습니다.",
+    );
+    renderBulletSummary(
+      "organization-operation-questions",
+      summarizeOrganizationOperationQuestions(organizationStructure, workforceItems),
+      "운영 질문을 정리하지 못했습니다.",
     );
 
     let organizationHistoryItems = [];
     let organizationMemberHistoryItems = [];
-    if (selectedCode) {
+    if (effectiveSelectedCode) {
       const [organizationHistory, organizationMemberHistory] = await Promise.all([
-        fetchJson(baseUrl, `admin/master-data/organizations/${selectedCode}/history`),
-        fetchJson(baseUrl, `admin/master-data/organizations/${selectedCode}/member-history`),
+        fetchJson(baseUrl, `admin/master-data/organizations/${effectiveSelectedCode}/history`),
+        fetchJson(baseUrl, `admin/master-data/organizations/${effectiveSelectedCode}/member-history`),
       ]);
       organizationHistoryItems = organizationHistory?.items || [];
       organizationMemberHistoryItems = organizationMemberHistory?.items || [];
@@ -2666,7 +3458,7 @@ async function loadOrganizationsAdminLiveData() {
         title: `${item.action_type} · ${formatRelativeTime(item.changed_at)}`,
         body: item.summary,
       })),
-      selectedCode ? "선택 조직의 변경 이력이 없습니다." : "선택된 조직이 없습니다.",
+      effectiveSelectedCode ? "선택 조직의 변경 이력이 없습니다." : "선택된 조직이 없습니다.",
     );
     renderBulletSummary(
       "organization-member-history-summary",
@@ -2674,11 +3466,8 @@ async function loadOrganizationsAdminLiveData() {
         title: `${item.employee_number} · ${item.action_type}`,
         body: `${item.from_organization_code || "-"} -> ${item.to_organization_code || "-"} · ${formatRelativeTime(item.changed_at)} · ${item.summary}`,
       })),
-      selectedCode ? "선택 조직의 구성원 이동 이력이 없습니다." : "선택된 조직이 없습니다.",
+      effectiveSelectedCode ? "선택 조직의 구성원 이동 이력이 없습니다." : "선택된 조직이 없습니다.",
     );
-
-    const selectedRecord =
-      organizationItems.find((item) => item.organization_code === selectedCode) || organizationItems[0] || null;
     organizationAdminState.organizations = organizationItems;
     organizationAdminState.workforce = workforceItems;
     renderOrganizationDirectoryAndTree();
@@ -2692,12 +3481,12 @@ async function loadOrganizationsAdminLiveData() {
       renderOrganizationAdminPreviews();
     }
 
-    setApiStatus("ok", `조직 마스터 연결 완료. 활성 조직 ${organizationItems.length}개입니다.`);
+    setApiStatus("ok", `조직 마스터 연결 완료. 조직 ${organizationItems.length}개입니다.`);
   } catch (error) {
     organizationAdminState.organizations = [];
     organizationAdminState.workforce = [];
     setMetricBlock("organization-admin-metrics", [
-      { label: "활성 조직", value: "-" },
+      { label: "조직", value: "-" },
       { label: "최상위 조직", value: "-" },
       { label: "상세 카드", value: "-" },
     ]);
@@ -2706,6 +3495,8 @@ async function loadOrganizationsAdminLiveData() {
     renderBulletSummary("organization-admin-action-summary", [], "운영 액션을 계산하지 못했습니다.");
     renderBulletSummary("organization-admin-impact-summary", [], "영향 범위를 계산하지 못했습니다.");
     renderBulletSummary("organization-tree-summary", [], "선택 조직 요약을 계산하지 못했습니다.");
+    renderBulletSummary("organization-next-actions", [], "시작할 작업 후보를 계산하지 못했습니다.");
+    renderBulletSummary("organization-operation-questions", [], "운영 질문을 정리하지 못했습니다.");
     renderTableRows("organization-direct-members-body", [], "직속 구성원 목록을 불러오지 못했습니다.");
     renderBulletSummary("organization-direct-members-summary", [], "조직-인력 연결 요약을 계산하지 못했습니다.");
     renderBulletSummary("organization-history-summary", [], "조직 변경 이력을 불러오지 못했습니다.");
@@ -2740,7 +3531,6 @@ async function loadWorkforceAdminLiveData() {
   try {
     const workforce = await fetchJson(baseUrl, "admin/master-data/workforce", {
       employment_status: "active",
-      primary_organization_code: organizationCode,
     });
     const workforceItems = workforce?.items || [];
     workforceAdminState.items = workforceItems;
@@ -2751,17 +3541,18 @@ async function loadWorkforceAdminLiveData() {
     renderWorkforceAdminView();
     populateWorkforceForm(getSelectedWorkforceItem(getFilteredWorkforceItems(workforceItems)), organizationCode);
 
-    setApiStatus("ok", `인력 마스터 연결 완료. ${organizationCode || "전체"} 기준 ${workforceItems.length}명입니다.`);
+    setApiStatus("ok", `인력 마스터 연결 완료. 전체 인력 ${workforceItems.length}명입니다.`);
   } catch (error) {
     workforceAdminState.items = [];
     workforceAdminState.organizationCode = organizationCode;
     setMetricBlock("workforce-admin-metrics", [
       { label: "조직 필터", value: organizationCode || "-" },
-      { label: "활성 인력", value: "-" },
+      { label: "인력", value: "-" },
       { label: "직군 정보", value: "-" },
     ]);
     renderBulletSummary("workforce-directory-summary", [], "인력 범위 요약을 불러오지 못했습니다.");
     renderTableRows("data-admin-workforce-body", [], "인력 목록을 불러오지 못했습니다.");
+    renderTableRows("data-admin-unassigned-workforce-body", [], "미배정 인력 목록을 불러오지 못했습니다.");
     renderBulletSummary("workforce-selected-summary", [], "선택 인력 상세를 불러오지 못했습니다.");
     renderBulletSummary("workforce-organization-context-summary", [], "조직 맥락을 계산하지 못했습니다.");
     renderBulletSummary("workforce-admin-action-summary", [], "운영 액션을 계산하지 못했습니다.");
@@ -2777,6 +3568,30 @@ async function loadWorkforceAdminLiveData() {
 }
 
 function setupOrganizationAdminActions(load) {
+  renderOrganizationWorkbenchTab();
+
+  document.querySelectorAll("[data-org-workbench-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      activateOrganizationWorkbenchTab(button.dataset.orgWorkbenchTab || "structure");
+    });
+  });
+
+  const openStructureButton = document.getElementById("organization-open-structure-button");
+  if (openStructureButton) {
+    openStructureButton.addEventListener("click", () => {
+      activateOrganizationWorkbenchTab("structure");
+      document.getElementById("organization-code-input")?.focus();
+    });
+  }
+
+  const openMemberButton = document.getElementById("organization-open-member-button");
+  if (openMemberButton) {
+    openMemberButton.addEventListener("click", () => {
+      activateOrganizationWorkbenchTab("member");
+      document.getElementById("organization-member-employee-number-input")?.focus();
+    });
+  }
+
   const saveButton = document.getElementById("organization-save-button");
   const deleteButton = document.getElementById("organization-delete-button");
   const status = document.getElementById("organization-action-status");
@@ -2938,7 +3753,112 @@ function setupOrganizationAdminActions(load) {
 
   const treePanel = document.getElementById("organization-tree-panel");
   if (treePanel) {
-    treePanel.addEventListener("click", (event) => {
+    treePanel.addEventListener("input", (event) => {
+      const field = event.target.closest("[data-org-draft-field]");
+      if (field) {
+        if (field.dataset.orgDraftField === "name") {
+          organizationTreeUiState.draftName = event.target.value || "";
+        }
+        if (field.dataset.orgDraftField === "key") {
+          organizationTreeUiState.draftKey = event.target.value || "";
+        }
+        refreshOrganizationDraftHint();
+        return;
+      }
+
+      const editField = event.target.closest("[data-org-edit-field]");
+      if (!editField) return;
+      if (editField.dataset.orgEditField === "name") {
+        organizationTreeUiState.editName = event.target.value || "";
+      }
+      if (editField.dataset.orgEditField === "parent") {
+        organizationTreeUiState.editParentCode = event.target.value || "";
+      }
+      if (editField.dataset.orgEditField === "effective-from") {
+        organizationTreeUiState.editEffectiveFrom = event.target.value || "";
+      }
+      if (editField.dataset.orgEditField === "effective-to") {
+        organizationTreeUiState.editEffectiveTo = event.target.value || "";
+      }
+    });
+
+    treePanel.addEventListener("change", (event) => {
+      const field = event.target.closest("[data-org-draft-field='type']");
+      if (field) {
+        organizationTreeUiState.draftType = event.target.value || "team";
+        refreshOrganizationDraftHint();
+        return;
+      }
+
+      const editField = event.target.closest("[data-org-edit-field='status']");
+      if (!editField) return;
+      organizationTreeUiState.editStatus = event.target.value || "active";
+    });
+
+    treePanel.addEventListener("click", async (event) => {
+      const draftAction = event.target.closest("[data-org-draft-action]");
+      if (draftAction) {
+        if (draftAction.dataset.orgDraftAction === "cancel") {
+          resetOrganizationTreeDraft();
+          renderOrganizationDirectoryAndTree();
+          setOrganizationActionStatusCopy("하위 조직 초안 생성을 취소했습니다.");
+          return;
+        }
+        if (draftAction.dataset.orgDraftAction === "create") {
+          try {
+            await createOrganizationFromTreeDraft(load);
+          } catch (error) {
+            setOrganizationActionStatusCopy(`트리 하위 조직 생성 실패: ${error.message}`);
+          }
+          return;
+        }
+      }
+
+      const editAction = event.target.closest("[data-org-edit-action]");
+      if (editAction) {
+        if (editAction.dataset.orgEditAction === "cancel") {
+          resetOrganizationTreeInlineEdit();
+          renderOrganizationDirectoryAndTree();
+          setOrganizationActionStatusCopy("조직 수정 인라인 편집을 취소했습니다.");
+          return;
+        }
+        if (editAction.dataset.orgEditAction === "save") {
+          try {
+            await saveOrganizationFromInlineEdit(load);
+          } catch (error) {
+            setOrganizationActionStatusCopy(`트리 조직 수정 실패: ${error.message}`);
+          }
+          return;
+        }
+      }
+
+      const actionButton = event.target.closest("[data-tree-card-action]");
+      if (actionButton) {
+        const selected = getOrganizationByCode(
+          organizationAdminState.organizations,
+          actionButton.dataset.organizationCode || "",
+        );
+        if (!selected) return;
+
+        if (actionButton.dataset.treeCardAction === "add-child") {
+          openOrganizationDraftUnderParent(selected);
+          setOrganizationActionStatusCopy(`${selected.organization_name} 아래에 새 하위 조직 초안을 작성하세요.`);
+          return;
+        }
+
+        if (actionButton.dataset.treeCardAction === "edit") {
+          openOrganizationInlineEdit(selected);
+          setOrganizationActionStatusCopy(`${selected.organization_name} 카드 아래에서 바로 수정하세요.`);
+          return;
+        }
+
+        if (actionButton.dataset.treeCardAction === "review-delete") {
+          if (actionButton.disabled) return;
+          openOrganizationDeleteModal(selected);
+          return;
+        }
+      }
+
       const button = event.target.closest("[data-organization-code]");
       if (!button) return;
       const record = {
@@ -2949,28 +3869,133 @@ function setupOrganizationAdminActions(load) {
         effective_from: button.dataset.effectiveFrom || null,
         effective_to: button.dataset.effectiveTo || null,
       };
+      resetOrganizationTreeDraft();
+      resetOrganizationTreeInlineEdit();
       populateOrganizationForm(record);
       syncOrganizationSelectionToWorkforce(record);
+      activateOrganizationWorkbenchTab("structure", { scroll: false });
       load();
     });
   }
 
-  const directoryTable = document.getElementById("data-admin-organizations-body");
-  if (directoryTable) {
-    directoryTable.addEventListener("click", (event) => {
-      const row = event.target.closest("tr[data-organization-code]");
-      if (!row) return;
-      const record = {
-        organization_code: row.dataset.organizationCode || "",
-        organization_name: row.dataset.organizationName || "",
-        parent_organization_code: row.dataset.parentOrganizationCode || null,
-        organization_status: row.dataset.organizationStatus || "active",
-        effective_from: row.dataset.effectiveFrom || null,
-        effective_to: row.dataset.effectiveTo || null,
-      };
-      populateOrganizationForm(record);
-      syncOrganizationSelectionToWorkforce(record);
-      load();
+  const deleteModal = document.getElementById("organization-delete-modal");
+  deleteModal?.addEventListener("click", (event) => {
+    if (event.target === deleteModal) {
+      closeOrganizationDeleteModal();
+    }
+  });
+
+  document.getElementById("organization-delete-cancel-button")?.addEventListener("click", () => {
+    closeOrganizationDeleteModal();
+  });
+
+  document.getElementById("organization-delete-confirm-button")?.addEventListener("click", async () => {
+    const statusTarget = document.getElementById("organization-delete-modal-status");
+    if (statusTarget) {
+      statusTarget.textContent = "조직 삭제 요청 중입니다.";
+    }
+    try {
+      await deleteOrganizationFromTree(load);
+    } catch (error) {
+      if (statusTarget) {
+        statusTarget.textContent = `조직 삭제 실패: ${error.message}`;
+      }
+    }
+  });
+
+  const detailModal = document.getElementById("organization-detail-modal");
+  detailModal?.addEventListener("click", (event) => {
+    if (event.target === detailModal) {
+      closeOrganizationDetailModal();
+    }
+  });
+
+  document.getElementById("organization-detail-close-button")?.addEventListener("click", () => {
+    closeOrganizationDetailModal();
+  });
+
+  document.getElementById("organization-detail-save-button")?.addEventListener("click", async () => {
+    const statusTarget = document.getElementById("organization-detail-modal-status");
+    const organizationCode = document.getElementById("organization-detail-code-input")?.value.trim();
+    const organizationName = document.getElementById("organization-detail-name-input")?.value.trim();
+    const parentOrganizationCode = document
+      .getElementById("organization-detail-parent-input")
+      ?.value.trim();
+    const organizationStatus = document
+      .getElementById("organization-detail-status-input")
+      ?.value.trim();
+    const effectiveFrom = document
+      .getElementById("organization-detail-effective-from-input")
+      ?.value.trim();
+    const effectiveTo = document
+      .getElementById("organization-detail-effective-to-input")
+      ?.value.trim();
+    const isEditMode = organizationTreeUiState.detailMode === "edit";
+
+    if (!organizationCode || !organizationName || !organizationStatus) {
+      if (statusTarget) {
+        statusTarget.textContent = "조직 코드, 조직명, 상태는 필수입니다.";
+      }
+      return;
+    }
+
+    if (statusTarget) {
+      statusTarget.textContent = isEditMode ? "조직 수정 저장 중입니다." : "신규 조직 상세 저장 중입니다.";
+    }
+    try {
+      if (isEditMode) {
+        await sendJson(getActiveApiBaseUrl(), `admin/master-data/organizations/${organizationCode}`, "PATCH", {
+          organization_name: organizationName,
+          parent_organization_code: parentOrganizationCode || null,
+          organization_status: organizationStatus || "active",
+          effective_from: effectiveFrom || null,
+          effective_to: effectiveTo || null,
+        });
+      } else {
+        await sendJson(getActiveApiBaseUrl(), "admin/master-data/organizations", "POST", {
+          organization_code: organizationCode,
+          organization_name: organizationName,
+          parent_organization_code: parentOrganizationCode || null,
+          organization_status: organizationStatus || "active",
+          effective_from: effectiveFrom || null,
+          effective_to: effectiveTo || null,
+        });
+      }
+      closeOrganizationDetailModal();
+      setOrganizationActionStatusCopy(
+        isEditMode
+          ? `조직 ${organizationCode} 수정이 완료되었습니다.`
+          : `조직 ${organizationCode} 상세 저장이 완료되었습니다.`,
+      );
+      await load();
+    } catch (error) {
+      if (statusTarget) {
+        statusTarget.textContent = `${isEditMode ? "조직 수정" : "상세 저장"} 실패: ${error.message}`;
+      }
+    }
+  });
+
+  const divisionTabs = document.getElementById("organization-division-tabs");
+  if (divisionTabs) {
+    divisionTabs.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-business-unit-code]");
+      if (!button) return;
+      const businessUnitCode = button.dataset.businessUnitCode || "";
+      const businessUnit = getOrganizationByCode(organizationAdminState.organizations, businessUnitCode);
+      if (!businessUnit) return;
+      setSelectedBusinessUnitCode(businessUnitCode);
+      const selectedCode = getSelectedOrganizationCode();
+      const selectedRoot = selectedCode
+        ? getBusinessUnitCodeForOrganization(organizationAdminState.organizations, selectedCode)
+        : "";
+      if (selectedRoot !== businessUnitCode) {
+        syncOrganizationSelectionToWorkforce(businessUnit);
+        populateOrganizationForm(businessUnit);
+        populateOrganizationMemberForm(null, businessUnit.organization_code);
+        activateOrganizationWorkbenchTab("structure", { scroll: false });
+      } else {
+        renderOrganizationDirectoryAndTree();
+      }
     });
   }
 
@@ -2979,6 +4004,7 @@ function setupOrganizationAdminActions(load) {
     memberTable.addEventListener("click", (event) => {
       const row = event.target.closest("tr[data-employee-number]");
       if (!row) return;
+      activateOrganizationWorkbenchTab("member");
       populateOrganizationMemberForm(
         {
           employee_number: row.dataset.employeeNumber || "",
@@ -3009,7 +4035,7 @@ function setupOrganizationAdminActions(load) {
       const searchInput = document.getElementById("organization-directory-search-input");
       const scopeSelect = document.getElementById("organization-directory-scope-select");
       if (searchInput) searchInput.value = "";
-      if (scopeSelect) scopeSelect.value = "all";
+      if (scopeSelect) scopeSelect.value = "business_unit";
       renderOrganizationDirectoryAndTree();
     });
   }
@@ -3045,8 +4071,9 @@ function setupWorkforceAdminActions(load) {
     });
   }
 
-  const workforceTable = document.getElementById("data-admin-workforce-body");
-  if (workforceTable) {
+  const bindWorkforceTableSelection = (tableId) => {
+    const workforceTable = document.getElementById(tableId);
+    if (!workforceTable) return;
     workforceTable.addEventListener("click", (event) => {
       const row = event.target.closest("tr[data-employee-number]");
       if (!row) return;
@@ -3063,7 +4090,9 @@ function setupWorkforceAdminActions(load) {
       populateWorkforceForm(record, record.primary_organization_code);
       renderWorkforceAdminView();
     });
-  }
+  };
+  bindWorkforceTableSelection("data-admin-workforce-body");
+  bindWorkforceTableSelection("data-admin-unassigned-workforce-body");
 
   const workforceFilterResetButton = document.getElementById("workforce-filter-reset-button");
   if (workforceFilterResetButton) {
@@ -3113,8 +4142,8 @@ function setupWorkforceAdminActions(load) {
     const jobFamily = document.getElementById("member-job-family-input")?.value.trim();
     const email = document.getElementById("member-email-input")?.value.trim();
 
-    if (!organizationCode || !employeeNumber) {
-      status.textContent = "대상 조직과 사번은 필수입니다.";
+    if (!employeeNumber) {
+      status.textContent = "사번은 필수입니다.";
       return;
     }
 
@@ -3122,19 +4151,34 @@ function setupWorkforceAdminActions(load) {
 
     try {
       if (targetOrganizationCode) {
-        await sendJson(
-          baseUrl,
-          `admin/master-data/organizations/${organizationCode}/members/${employeeNumber}`,
-          "PATCH",
-          {
-            display_name: displayName || null,
-            employment_status: employmentStatus || null,
+        if (organizationCode) {
+          await sendJson(
+            baseUrl,
+            `admin/master-data/organizations/${organizationCode}/members/${employeeNumber}`,
+            "PATCH",
+            {
+              display_name: displayName || null,
+              employment_status: employmentStatus || null,
+              primary_organization_code: targetOrganizationCode,
+              job_family: jobFamily ? jobFamily : null,
+              email: email ? email : null,
+            },
+          );
+        } else {
+          await sendJson(baseUrl, "admin/master-data/workforce", "POST", {
+            employee_number: employeeNumber,
+            display_name: displayName,
+            employment_status: employmentStatus || "active",
             primary_organization_code: targetOrganizationCode,
-            job_family: jobFamily ? jobFamily : null,
-            email: email ? email : null,
-          },
-        );
+            job_family: jobFamily || null,
+            email: email || null,
+          });
+        }
       } else {
+        if (!organizationCode) {
+          status.textContent = "미배정 인력을 저장하려면 이동 대상 조직을 입력하세요.";
+          return;
+        }
         await sendJson(baseUrl, `admin/master-data/organizations/${organizationCode}/members`, "POST", {
           employee_number: employeeNumber,
           display_name: displayName,
@@ -3160,20 +4204,34 @@ function setupWorkforceAdminActions(load) {
     const baseUrl = getActiveApiBaseUrl();
     const organizationCode = document.getElementById("member-organization-code-input")?.value.trim();
     const employeeNumber = document.getElementById("member-employee-number-input")?.value.trim();
+    const displayName = document.getElementById("member-display-name-input")?.value.trim();
+    const jobFamily = document.getElementById("member-job-family-input")?.value.trim();
+    const email = document.getElementById("member-email-input")?.value.trim();
 
-    if (!organizationCode || !employeeNumber) {
-      status.textContent = "대상 조직과 사번은 필수입니다.";
+    if (!employeeNumber) {
+      status.textContent = "사번은 필수입니다.";
       return;
     }
 
     status.textContent = "구성원 제거 요청 중입니다.";
 
     try {
-      await sendJson(
-        baseUrl,
-        `admin/master-data/organizations/${organizationCode}/members/${employeeNumber}`,
-        "DELETE",
-      );
+      if (organizationCode) {
+        await sendJson(
+          baseUrl,
+          `admin/master-data/organizations/${organizationCode}/members/${employeeNumber}`,
+          "DELETE",
+        );
+      } else {
+        await sendJson(baseUrl, "admin/master-data/workforce", "POST", {
+          employee_number: employeeNumber,
+          display_name: displayName,
+          employment_status: "inactive",
+          primary_organization_code: null,
+          job_family: jobFamily || null,
+          email: email || null,
+        });
+      }
       status.textContent = `구성원 ${employeeNumber} 비활성화가 완료되었습니다.`;
       await load();
     } catch (error) {

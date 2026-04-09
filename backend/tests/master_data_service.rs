@@ -50,7 +50,7 @@ async fn master_data_repository_upserts_and_lists_organization_and_workforce() -
             employee_number: "E9001".to_string(),
             display_name: "박연계".to_string(),
             employment_status: "active".to_string(),
-            primary_organization_code: "payments".to_string(),
+            primary_organization_code: Some("payments".to_string()),
             job_family: Some("integration_engineering".to_string()),
             email: Some("integration@example.com".to_string()),
         })
@@ -74,7 +74,7 @@ async fn master_data_repository_upserts_and_lists_organization_and_workforce() -
     assert_eq!(organizations.len(), 3);
     assert_eq!(workforce_items.len(), 1);
     assert_eq!(workforce.employee_number, "E9001");
-    assert_eq!(workforce.primary_organization_code, "payments");
+    assert_eq!(workforce.primary_organization_code.as_deref(), Some("payments"));
     assert_eq!(workforce_items[0].display_name, "박연계");
 
     Ok(())
@@ -112,6 +112,16 @@ async fn master_data_repository_supports_hierarchy_update_and_soft_delete() -> a
             effective_to: None,
         })
         .await?;
+    repository
+        .upsert_workforce(UpsertWorkforceInput {
+            employee_number: "E3001".to_string(),
+            display_name: "조직삭제".to_string(),
+            employment_status: "active".to_string(),
+            primary_organization_code: Some("payments".to_string()),
+            job_family: None,
+            email: None,
+        })
+        .await?;
 
     let updated = repository
         .update_organization(
@@ -130,6 +140,16 @@ async fn master_data_repository_supports_hierarchy_update_and_soft_delete() -> a
 
     let deleted = repository.soft_delete_organization("payments").await?;
     assert_eq!(deleted.organization_status, "deleted");
+
+    let workforce_items = repository
+        .list_workforce(&WorkforceListFilter {
+            employment_status: Some("active".to_string()),
+            primary_organization_code: None,
+        })
+        .await?;
+    assert_eq!(workforce_items.len(), 1);
+    assert_eq!(workforce_items[0].primary_organization_code, None);
+    assert_eq!(workforce_items[0].primary_organization_name, None);
 
     Ok(())
 }
@@ -167,7 +187,7 @@ async fn master_data_repository_supports_member_move_and_remove() -> anyhow::Res
             employee_number: "E1001".to_string(),
             display_name: "홍관리".to_string(),
             employment_status: "active".to_string(),
-            primary_organization_code: "platform".to_string(),
+            primary_organization_code: Some("platform".to_string()),
             job_family: Some("operations".to_string()),
             email: None,
         })
@@ -186,7 +206,7 @@ async fn master_data_repository_supports_member_move_and_remove() -> anyhow::Res
         )
         .await?;
 
-    assert_eq!(moved.primary_organization_code, "payments");
+    assert_eq!(moved.primary_organization_code.as_deref(), Some("payments"));
     assert_eq!(moved.display_name, "홍관리자");
 
     let removed = repository.soft_delete_workforce("E1001").await?;
@@ -230,7 +250,7 @@ async fn master_data_repository_returns_organization_structure_snapshot() -> any
             employee_number: "E7201".to_string(),
             display_name: "조직구조".to_string(),
             employment_status: "active".to_string(),
-            primary_organization_code: "part".to_string(),
+            primary_organization_code: Some("part".to_string()),
             job_family: None,
             email: None,
         })
@@ -256,6 +276,7 @@ async fn connect_and_migrate(test_db: &TestDatabase) -> anyhow::Result<PgPool> {
         database_url: test_db.database_url(),
         database_max_connections: 5,
         auto_apply_migrations: true,
+        cors_allowed_origins: vec![],
     };
     let pool = connect(&settings).await?;
     run_migrations(&pool).await?;

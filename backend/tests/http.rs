@@ -408,6 +408,76 @@ async fn master_data_workforce_can_be_upserted_and_listed() {
 }
 
 #[tokio::test]
+async fn deleting_leaf_organization_unassigns_members_instead_of_blocking() {
+    let app = build_router(AppState::new());
+
+    let create_org = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/admin/master-data/organizations")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"organization_code":"delivery","organization_name":"Delivery Division","organization_status":"active"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(create_org.status(), StatusCode::OK);
+
+    let create_member = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/admin/master-data/organizations/delivery/members")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"employee_number":"E2001","display_name":"삭제테스트","employment_status":"active","job_family":"ops"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(create_member.status(), StatusCode::OK);
+
+    let delete_org = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("DELETE")
+                .uri("/api/v1/admin/master-data/organizations/delivery")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(delete_org.status(), StatusCode::NO_CONTENT);
+
+    let list_workforce = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/admin/master-data/workforce?employment_status=active")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(list_workforce.status(), StatusCode::OK);
+
+    let body = axum::body::to_bytes(list_workforce.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let items = json["items"].as_array().unwrap();
+    assert_eq!(items.len(), 1);
+    assert!(items[0]["primary_organization_code"].is_null());
+    assert!(items[0]["primary_organization_name"].is_null());
+}
+
+#[tokio::test]
 async fn organization_members_can_be_managed_via_nested_routes() {
     let app = build_router(AppState::new());
 

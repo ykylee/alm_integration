@@ -30,7 +30,7 @@ struct UpsertWorkforceRequest {
     employee_number: String,
     display_name: String,
     employment_status: String,
-    primary_organization_code: String,
+    primary_organization_code: Option<String>,
     job_family: Option<String>,
     email: Option<String>,
 }
@@ -318,7 +318,7 @@ async fn upsert_organization_member(
         employee_number: request.employee_number,
         display_name: request.display_name,
         employment_status: request.employment_status,
-        primary_organization_code: organization_code,
+        primary_organization_code: Some(organization_code),
         job_family: request.job_family,
         email: request.email,
     };

@@ -20,6 +20,7 @@ async fn applies_migrations_to_empty_postgres_database() -> anyhow::Result<()> {
         database_url: test_db.database_url(),
         database_max_connections: 5,
         auto_apply_migrations: true,
+        cors_allowed_origins: vec![],
     };
 
     let pool = connect(&settings).await?;
@@ -89,6 +90,7 @@ async fn bootstrap_connects_to_created_postgres_database() -> anyhow::Result<()>
         database_url: test_db.database_url(),
         database_max_connections: 3,
         auto_apply_migrations: false,
+        cors_allowed_origins: vec![],
     };
 
     let pool = connect(&settings).await?;
