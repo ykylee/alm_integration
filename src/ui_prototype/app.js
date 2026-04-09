@@ -756,6 +756,9 @@ const organizationTreeUiState = {
   draftType: "team",
   draftName: "",
   draftKey: "",
+  topLevelDraftOpen: false,
+  topLevelDraftName: "",
+  topLevelDraftKey: "",
   deleteTargetCode: "",
   detailTargetCode: "",
   detailMode: "create",
@@ -1870,7 +1873,7 @@ function renderBusinessUnitTabs(organizations, workforceItems) {
     return;
   }
 
-  target.innerHTML = topLevelOrganizations
+  const tabButtons = topLevelOrganizations
     .map((item) => {
       const subtreeCodes = getOrganizationDescendantCodes(organizations, item.organization_code);
       const activeMembers = workforceItems.filter(
@@ -1888,6 +1891,22 @@ function renderBusinessUnitTabs(organizations, workforceItems) {
       )}개 조직 · ${escapeHtml(String(activeMembers))}명</span></button>`;
     })
     .join("");
+
+  const previewCode = buildOrganizationCodeFromDraft(
+    "business_unit",
+    organizationTreeUiState.topLevelDraftKey,
+  );
+  const draftCard = organizationTreeUiState.topLevelDraftOpen
+    ? `<div class="org-division-draft-card"><label class="org-draft-field"><span>사업부명</span><input class="control-input" type="text" value="${escapeHtml(
+        organizationTreeUiState.topLevelDraftName,
+      )}" placeholder="예: 데이터전략사업부" data-org-top-draft-field="name" /></label><label class="org-draft-field"><span>키</span><input class="control-input" type="text" value="${escapeHtml(
+        organizationTreeUiState.topLevelDraftKey,
+      )}" placeholder="예: data_strategy" data-org-top-draft-field="key" /></label><p class="org-pyramid-draft-hint">생성 코드: <span class="mono">${escapeHtml(
+        previewCode || "입력 대기",
+      )}</span></p><div class="org-pyramid-draft-actions"><button class="control-button secondary" type="button" data-org-top-draft-action="cancel">취소</button><button class="control-button" type="button" data-org-top-draft-action="create">생성</button></div></div>`
+    : "";
+
+  target.innerHTML = `${tabButtons}<button class="org-division-add-button" type="button" aria-label="사업부 추가" title="사업부 추가" data-org-top-level-add>+</button>${draftCard}`;
 }
 
 function renderOrganizationPyramidTree(targetId, organizations, workforceItems, rootCode) {
@@ -2019,6 +2038,12 @@ function resetOrganizationTreeDraft() {
   organizationTreeUiState.draftKey = "";
 }
 
+function resetOrganizationTopLevelDraft() {
+  organizationTreeUiState.topLevelDraftOpen = false;
+  organizationTreeUiState.topLevelDraftName = "";
+  organizationTreeUiState.topLevelDraftKey = "";
+}
+
 function resetOrganizationTreeInlineEdit() {
   organizationTreeUiState.editTargetCode = "";
   organizationTreeUiState.editName = "";
@@ -2030,6 +2055,7 @@ function resetOrganizationTreeInlineEdit() {
 
 function openOrganizationDraftUnderParent(record) {
   resetOrganizationTreeInlineEdit();
+  resetOrganizationTopLevelDraft();
   organizationTreeUiState.draftParentCode = record.organization_code;
   organizationTreeUiState.draftType = getDefaultChildOrganizationType(
     organizationAdminState.organizations,
@@ -2043,6 +2069,7 @@ function openOrganizationDraftUnderParent(record) {
 function openOrganizationInlineEdit(record) {
   if (!record) return;
   resetOrganizationTreeDraft();
+  resetOrganizationTopLevelDraft();
   organizationTreeUiState.editTargetCode = record.organization_code;
   organizationTreeUiState.editName = record.organization_name || "";
   organizationTreeUiState.editParentCode = record.parent_organization_code || "";
@@ -2857,6 +2884,42 @@ async function createOrganizationFromTreeDraft(load) {
     openOrganizationInlineEdit(created);
   }
   setOrganizationActionStatusCopy(`조직 ${organizationCode} 기본 생성이 완료되었습니다. 카드 아래에서 이어서 보완하세요.`);
+}
+
+async function createTopLevelOrganizationDraft(load) {
+  const baseUrl = getActiveApiBaseUrl();
+  const organizationName = organizationTreeUiState.topLevelDraftName.trim();
+  const normalizedKey = normalizeOrganizationKey(organizationTreeUiState.topLevelDraftKey);
+  const organizationCode = buildOrganizationCodeFromDraft("business_unit", normalizedKey);
+
+  if (!organizationName || !normalizedKey || !organizationCode) {
+    setOrganizationActionStatusCopy("사업부명과 키를 모두 입력해야 새 사업부를 만들 수 있습니다.");
+    return;
+  }
+  if (getOrganizationByCode(organizationAdminState.organizations, organizationCode)) {
+    setOrganizationActionStatusCopy(`이미 존재하는 사업부 코드입니다: ${organizationCode}`);
+    return;
+  }
+
+  setOrganizationActionStatusCopy(`사업부 ${organizationCode} 생성 중입니다.`);
+  await sendJson(baseUrl, "admin/master-data/organizations", "POST", {
+    organization_code: organizationCode,
+    organization_name: organizationName,
+    parent_organization_code: null,
+    organization_status: "active",
+    effective_from: null,
+    effective_to: null,
+  });
+  resetOrganizationTopLevelDraft();
+  setSelectedBusinessUnitCode(organizationCode);
+  setSelectedOrganizationCode(organizationCode);
+  await load();
+  const created = getOrganizationByCode(organizationAdminState.organizations, organizationCode);
+  if (created) {
+    populateOrganizationForm(created);
+    populateOrganizationMemberForm(null, created.organization_code);
+  }
+  setOrganizationActionStatusCopy(`사업부 ${organizationCode} 생성이 완료되었습니다.`);
 }
 
 async function saveOrganizationFromInlineEdit(load) {
@@ -4012,7 +4075,47 @@ function setupOrganizationAdminActions(load) {
 
   const divisionTabs = document.getElementById("organization-division-tabs");
   if (divisionTabs) {
+    divisionTabs.addEventListener("input", (event) => {
+      const field = event.target.closest("[data-org-top-draft-field]");
+      if (!field) return;
+      if (field.dataset.orgTopDraftField === "name") {
+        organizationTreeUiState.topLevelDraftName = event.target.value || "";
+      }
+      if (field.dataset.orgTopDraftField === "key") {
+        organizationTreeUiState.topLevelDraftKey = event.target.value || "";
+      }
+      renderBusinessUnitTabs(organizationAdminState.organizations, organizationAdminState.workforce);
+    });
+
     divisionTabs.addEventListener("click", (event) => {
+      const topLevelAction = event.target.closest("[data-org-top-level-add]");
+      if (topLevelAction) {
+        resetOrganizationTreeDraft();
+        resetOrganizationTreeInlineEdit();
+        organizationTreeUiState.topLevelDraftOpen = true;
+        organizationTreeUiState.topLevelDraftName = "";
+        organizationTreeUiState.topLevelDraftKey = "";
+        renderBusinessUnitTabs(organizationAdminState.organizations, organizationAdminState.workforce);
+        setOrganizationActionStatusCopy("상단에서 새 사업부 초안을 바로 작성하세요.");
+        return;
+      }
+
+      const draftAction = event.target.closest("[data-org-top-draft-action]");
+      if (draftAction) {
+        if (draftAction.dataset.orgTopDraftAction === "cancel") {
+          resetOrganizationTopLevelDraft();
+          renderBusinessUnitTabs(organizationAdminState.organizations, organizationAdminState.workforce);
+          setOrganizationActionStatusCopy("사업부 추가 초안을 취소했습니다.");
+          return;
+        }
+        if (draftAction.dataset.orgTopDraftAction === "create") {
+          createTopLevelOrganizationDraft(load).catch((error) => {
+            setOrganizationActionStatusCopy(`사업부 생성 실패: ${error.message}`);
+          });
+          return;
+        }
+      }
+
       const button = event.target.closest("[data-business-unit-code]");
       if (!button) return;
       const businessUnitCode = button.dataset.businessUnitCode || "";
