@@ -1441,10 +1441,11 @@ function summarizeOrganizationOperationQuestions(snapshot, workforceItems) {
     },
     {
       title: "지금 정리할 수 있나",
-      body:
-        snapshot.children.length || activeMembers
-          ? `아직 어렵습니다. 직속 하위 ${snapshot.children.length}개, 직속 구성원 ${activeMembers}명이 남아 있습니다.`
-          : "직속 하위와 직속 구성원이 없어 정리 판단을 바로 진행할 수 있습니다.",
+      body: snapshot.children.length
+        ? `아직 어렵습니다. 직속 하위 ${snapshot.children.length}개가 남아 있어 먼저 정리 기준을 확인해야 합니다.`
+        : activeMembers
+          ? `정리 판단은 가능합니다. 직속 구성원 ${activeMembers}명은 삭제 시 미배정 상태로 전환됩니다.`
+          : "직속 하위가 없어 정리 판단을 바로 진행할 수 있습니다.",
     },
     {
       title: "무엇부터 확인할까",
@@ -1906,9 +1907,9 @@ function renderBusinessUnitTabs(organizations, workforceItems) {
       )}</span></p><div class="org-pyramid-draft-actions"><button class="control-button secondary" type="button" data-org-top-draft-action="cancel">취소</button><button class="control-button" type="button" data-org-top-draft-action="create">생성</button></div></div>`
     : "";
 
-  target.innerHTML = `<div class="org-division-tab-list">${tabButtons}</div><div class="org-division-actions">${
-    draftCard || ""
-  }<button class="org-division-add-button" type="button" aria-label="사업부 추가" title="사업부 추가" data-org-top-level-add>+</button></div>`;
+  target.innerHTML = `<div class="org-division-tabs-head"><div class="org-division-tab-list">${tabButtons}</div><div class="org-division-actions"><button class="org-division-add-button" type="button" aria-label="사업부 추가" title="사업부 추가" data-org-top-level-add>+</button></div></div>${
+    draftCard ? `<div class="org-division-draft-row">${draftCard}</div>` : ""
+  }`;
 }
 
 function renderOrganizationPyramidTree(targetId, organizations, workforceItems, rootCode) {
