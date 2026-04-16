@@ -611,10 +611,10 @@ const pageContent = {
   },
   "data-organizations": {
     "sys-admin": {
-      chip: "시스템 관리자 전용: Organization Master",
-      kicker: "System Admin Focus",
-      title: "Organization Master Surface",
-      summary: "조직 코드를 기준으로 상태, 상위 조직, 유효기간, 영향 범위를 조직 전용 작업면에서 관리한다.",
+      chip: "시스템 관리자 전용",
+      kicker: "",
+      title: "조직 필터",
+      summary: "",
       points: [
         ["조직 목록", "조직 기준 현황 확인"],
         ["구조 정보", "상위 조직과 유효기간 검토"],
@@ -737,6 +737,7 @@ const PROTOTYPE_API_BASE_KEY = "prototypeApiBaseUrl";
 const PROTOTYPE_SELECTED_ORGANIZATION_KEY = "prototypeSelectedOrganizationCode";
 const PROTOTYPE_SELECTED_BUSINESS_UNIT_KEY = "prototypeSelectedBusinessUnitCode";
 const PROTOTYPE_ORGANIZATION_WORKBENCH_TAB_KEY = "prototypeOrganizationWorkbenchTab";
+const PROTOTYPE_ORGANIZATION_LEADERS_KEY = "prototypeOrganizationLeaders";
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:28080/api/v1";
 const LEGACY_API_BASE_URLS = new Set([
   "http://127.0.0.1:8080/api/v1",
@@ -745,6 +746,8 @@ const LEGACY_API_BASE_URLS = new Set([
 const organizationAdminState = {
   organizations: [],
   workforce: [],
+  selectedMemberEmployeeNumber: "",
+  memberPickerOpen: false,
 };
 const organizationTreeViewportState = {
   rootCode: "",
@@ -836,6 +839,16 @@ function setSelectedBusinessUnitCode(value) {
     return;
   }
   localStorage.setItem(PROTOTYPE_SELECTED_BUSINESS_UNIT_KEY, value);
+}
+
+function getValidOrganizationDirectoryScope(value) {
+  return ["business_unit", "top_level", "selected_subtree"].includes(value) ? value : "business_unit";
+}
+
+function setOrganizationDirectoryScope(value) {
+  const scopeSelect = document.getElementById("organization-directory-scope-select");
+  if (!scopeSelect) return;
+  scopeSelect.value = getValidOrganizationDirectoryScope(value);
 }
 
 function getSelectedOrganizationWorkbenchTab() {
@@ -1493,6 +1506,38 @@ function setSelectedWorkforceEmployeeNumber(employeeNumber) {
   workforceAdminState.selectedEmployeeNumber = employeeNumber || "";
 }
 
+function setSelectedOrganizationMemberEmployeeNumber(employeeNumber) {
+  organizationAdminState.selectedMemberEmployeeNumber = employeeNumber || "";
+}
+
+function getStoredOrganizationLeaders() {
+  try {
+    const raw = localStorage.getItem(PROTOTYPE_ORGANIZATION_LEADERS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function getOrganizationLeaderEmployeeNumber(organizationCode) {
+  if (!organizationCode) return "";
+  const leaders = getStoredOrganizationLeaders();
+  return typeof leaders[organizationCode] === "string" ? leaders[organizationCode] : "";
+}
+
+function setOrganizationLeaderEmployeeNumber(organizationCode, employeeNumber) {
+  if (!organizationCode) return;
+  const leaders = getStoredOrganizationLeaders();
+  if (employeeNumber) {
+    leaders[organizationCode] = employeeNumber;
+  } else {
+    delete leaders[organizationCode];
+  }
+  localStorage.setItem(PROTOTYPE_ORGANIZATION_LEADERS_KEY, JSON.stringify(leaders));
+}
+
 function getSelectedWorkforceItem(items) {
   if (!items.length) return null;
   const selected =
@@ -1718,7 +1763,9 @@ function getOrganizationByCode(organizations, organizationCode) {
 function getOrganizationDirectoryFilterState() {
   return {
     query: document.getElementById("organization-directory-search-input")?.value.trim().toLowerCase() || "",
-    scope: document.getElementById("organization-directory-scope-select")?.value || "all",
+    scope: getValidOrganizationDirectoryScope(
+      document.getElementById("organization-directory-scope-select")?.value || "business_unit",
+    ),
   };
 }
 
@@ -1770,6 +1817,27 @@ function getTopLevelOrganizations(organizations) {
 function getBusinessUnitCodeForOrganization(organizations, organizationCode) {
   const path = getOrganizationAncestorCodes(organizations, organizationCode);
   return path[path.length - 1] || "";
+}
+
+function syncOrganizationDirectoryScopeWithSelection(organizations) {
+  const scope = getOrganizationDirectoryFilterState().scope;
+  const selectedCode = getSelectedOrganizationCode();
+  const currentBusinessUnitCode = getSelectedBusinessUnitCode();
+
+  if (scope === "selected_subtree" && !selectedCode) {
+    const fallbackCode = currentBusinessUnitCode || getTopLevelOrganizations(organizations)[0]?.organization_code || "";
+    if (fallbackCode) {
+      setSelectedOrganizationCode(fallbackCode);
+      setSelectedBusinessUnitCode(getBusinessUnitCodeForOrganization(organizations, fallbackCode) || fallbackCode);
+    }
+    return;
+  }
+
+  if (!selectedCode) return;
+  const selectedBusinessUnitCode = getBusinessUnitCodeForOrganization(organizations, selectedCode);
+  if (selectedBusinessUnitCode && selectedBusinessUnitCode !== currentBusinessUnitCode) {
+    setSelectedBusinessUnitCode(selectedBusinessUnitCode);
+  }
 }
 
 function getFilteredOrganizations(organizations) {
@@ -1846,17 +1914,26 @@ function renderOrganizationSelectionState() {
           item.primary_organization_code === selected.organization_code &&
           item.employment_status !== "inactive",
       ).length;
+      const leader = getOrganizationLeaderRecord(selected.organization_code);
       banner.innerHTML = `<div class="status-chip ok">현재 선택: ${escapeHtml(
         selected.organization_name,
       )}</div><p>${businessUnit ? `사업부 ${escapeHtml(businessUnit.organization_name)} · ` : ""}${escapeHtml(path)} · 코드 ${escapeHtml(
         selected.organization_code,
-      )} · 직속 구성원 ${escapeHtml(String(directMembers))}명</p>`;
+      )} · 직속 구성원 ${escapeHtml(String(directMembers))}명${leader ? ` · 리더 ${escapeHtml(leader.display_name)}` : ""}</p>`;
     }
   }
 
   const organizationRows = document.querySelectorAll("#data-admin-organizations-body tr[data-organization-code]");
   organizationRows.forEach((row) => {
     row.classList.toggle("active-row", row.dataset.organizationCode === selectedCode);
+  });
+
+  const memberRows = document.querySelectorAll("#organization-direct-members-body tr[data-employee-number]");
+  memberRows.forEach((row) => {
+    row.classList.toggle(
+      "active-row",
+      row.dataset.employeeNumber === organizationAdminState.selectedMemberEmployeeNumber,
+    );
   });
 
 }
@@ -2337,6 +2414,7 @@ function renderOrganizationDirectoryAndTree() {
   const organizations = organizationAdminState.organizations;
   const workforceItems = organizationAdminState.workforce;
   const topLevelOrganizations = getTopLevelOrganizations(organizations);
+  syncOrganizationDirectoryScopeWithSelection(organizations);
   let businessUnitCode = getSelectedBusinessUnitCode();
   if (!businessUnitCode || !getOrganizationByCode(organizations, businessUnitCode)) {
     businessUnitCode =
@@ -2669,18 +2747,12 @@ function summarizeOrganizationMemberActionPreview(organizations, workforceItems)
   const employeeNumber = document
     .getElementById("organization-member-employee-number-input")
     ?.value.trim();
-  const targetOrganizationCode = document
-    .getElementById("organization-member-target-organization-code-input")
-    ?.value.trim();
 
   if (!organizationCode || !employeeNumber) {
-    return [{ title: "구성원 정보 필요", body: "대상 조직과 사번을 입력하면 이동 또는 비활성화 영향을 계산합니다." }];
+    return [{ title: "구성원 정보 필요", body: "등록 인력을 선택하면 현재 조직 기준 배치 또는 해제 영향을 계산합니다." }];
   }
 
   const currentOrganization = getOrganizationByCode(organizations, organizationCode);
-  const targetOrganization = targetOrganizationCode
-    ? getOrganizationByCode(organizations, targetOrganizationCode)
-    : null;
   const member = workforceItems.find((item) => item.employee_number === employeeNumber) || null;
 
   const currentDirectMembers = workforceItems.filter(
@@ -2691,55 +2763,40 @@ function summarizeOrganizationMemberActionPreview(organizations, workforceItems)
   if (!member) {
     return [
       {
-        title: "신규 구성원 등록 모드",
-        body: `${organizationCode} 에 새 구성원을 등록할 예정입니다. 현재 이 조직의 직속 구성원은 ${currentDirectMembers}명입니다.`,
+        title: "등록 인력 확인 필요",
+        body: "이 화면에서는 시스템에 등록된 인력만 선택할 수 있습니다. 신규 등록은 인력 관리에서 진행합니다.",
       },
       {
-        title: "초기 배치",
-        body: targetOrganizationCode
-          ? "신규 등록에는 이동 대상 조직을 사용하지 않습니다. 대상 조직 입력은 비워 두세요."
-          : "등록 완료 시 선택 조직의 직속 구성원 목록에 즉시 반영됩니다.",
+        title: "현재 조직 기준",
+        body: `${organizationCode} 의 직속 구성원은 현재 ${currentDirectMembers}명입니다.`,
       },
     ];
   }
 
-  if (!targetOrganizationCode) {
+  if (member.primary_organization_code === organizationCode) {
     return [
       {
-        title: "비활성화 영향",
-        body: `${member.display_name} 을 비활성화하면 ${currentOrganization?.organization_name || organizationCode} 의 직속 구성원이 ${Math.max(
-          currentDirectMembers - (member.employment_status === "inactive" ? 0 : 1),
+        title: "해제 영향",
+        body: `${member.display_name} 을 ${currentOrganization?.organization_name || organizationCode} 에서 해제하면 직속 구성원이 ${Math.max(
+          currentDirectMembers - 1,
           0,
-        )}명으로 줄어듭니다.`,
+        )}명으로 줄고, 인력은 미배정 상태로 남습니다.`,
       },
       {
         title: "후속 확인",
-        body: "비활성화 후에는 조직 이력과 인력 화면에서 담당자 참조 누락이 없는지 점검해야 합니다.",
+        body: "해제 후에는 인력 관리 화면에서 다른 조직으로 다시 배치할지 이어서 판단하면 됩니다.",
       },
     ];
   }
 
-  const targetDirectMembers = workforceItems.filter(
-    (item) =>
-      item.primary_organization_code === targetOrganizationCode && item.employment_status !== "inactive",
-  ).length;
-
-  let movementBody = "";
-  if (targetOrganizationCode === organizationCode) {
-    movementBody = "같은 조직으로는 이동할 수 없습니다. 대상 조직 코드를 비우면 현재 조직 유지 상태로 수정됩니다.";
-  } else if (!targetOrganization) {
-    movementBody = "입력한 이동 대상 조직이 존재하지 않습니다.";
-  } else {
-    movementBody = `${member.display_name} 을 ${targetOrganization.organization_name} 으로 이동하면 현재 조직 인원은 ${Math.max(
-      currentDirectMembers - 1,
-      0,
-    )}명, 대상 조직 인원은 ${targetDirectMembers + 1}명이 됩니다.`;
-  }
+  const sourceOrganizationName = member.primary_organization_name || "미배정";
 
   return [
     {
-      title: "이동 영향",
-      body: movementBody,
+      title: "배치 영향",
+      body: `${member.display_name} 을 ${currentOrganization?.organization_name || organizationCode} 으로 배치하면 직속 구성원은 ${
+        currentDirectMembers + 1
+      }명이 됩니다.`,
     },
     {
       title: "현재 소속",
@@ -2749,7 +2806,10 @@ function summarizeOrganizationMemberActionPreview(organizations, workforceItems)
     },
     {
       title: "운영 체크",
-      body: "이동 후에는 선택 조직의 직속 구성원 패널과 구성원 이동 이력이 함께 갱신됩니다.",
+      body:
+        sourceOrganizationName === "미배정"
+          ? "배치 후에는 직속 구성원 표와 인력 관리 화면에서 새 소속이 함께 반영됩니다."
+          : `${sourceOrganizationName} 에서 현재 조직으로 이동하는 흐름입니다. 배치 후 양쪽 조직의 구성원 수가 함께 갱신됩니다.`,
     },
   ];
 }
@@ -2819,6 +2879,7 @@ function syncOrganizationSelectionToWorkforce(record) {
   if (organizationTreeUiState.draftParentCode && organizationTreeUiState.draftParentCode !== record.organization_code) {
     resetOrganizationTreeDraft();
   }
+  organizationAdminState.memberPickerOpen = false;
   setSelectedOrganizationCode(record.organization_code);
   const businessUnitCode = getBusinessUnitCodeForOrganization(
     organizationAdminState.organizations,
@@ -2837,6 +2898,8 @@ function syncOrganizationSelectionToWorkforce(record) {
   if (organizationMemberOrganizationInput) {
     organizationMemberOrganizationInput.value = record.organization_code;
   }
+  renderOrganizationLeaderControls(record.organization_code);
+  renderOrganizationMemberPicker(record.organization_code);
   if (organizationAdminState.organizations.length) {
     renderOrganizationDirectoryAndTree();
   } else {
@@ -2977,30 +3040,37 @@ function populateOrganizationMemberForm(record, organizationCode) {
   const employeeInput = document.getElementById("organization-member-employee-number-input");
   const displayNameInput = document.getElementById("organization-member-display-name-input");
   const employmentStatusInput = document.getElementById("organization-member-employment-status-input");
-  const targetOrganizationInput = document.getElementById(
-    "organization-member-target-organization-code-input",
+  const currentOrganizationInput = document.getElementById(
+    "organization-member-current-organization-input",
   );
   const jobFamilyInput = document.getElementById("organization-member-job-family-input");
   const emailInput = document.getElementById("organization-member-email-input");
+  const pickerSelect = document.getElementById("organization-member-existing-select");
 
   if (organizationInput) organizationInput.value = organizationCode || "";
   if (!record) {
-    if (employeeInput) employeeInput.value = "E3001";
-    if (displayNameInput) displayNameInput.value = "정조직";
-    if (employmentStatusInput) employmentStatusInput.value = "active";
-    if (targetOrganizationInput) targetOrganizationInput.value = "";
-    if (jobFamilyInput) jobFamilyInput.value = "operations";
-    if (emailInput) emailInput.value = "org-admin@example.com";
+    setSelectedOrganizationMemberEmployeeNumber("");
+    if (employeeInput) employeeInput.value = "";
+    if (displayNameInput) displayNameInput.value = "";
+    if (employmentStatusInput) employmentStatusInput.value = "";
+    if (currentOrganizationInput) currentOrganizationInput.value = "";
+    if (jobFamilyInput) jobFamilyInput.value = "";
+    if (emailInput) emailInput.value = "";
+    if (pickerSelect) pickerSelect.value = "";
     renderOrganizationAdminPreviews();
     return;
   }
 
+  setSelectedOrganizationMemberEmployeeNumber(record.employee_number || "");
   if (employeeInput) employeeInput.value = record.employee_number || "";
   if (displayNameInput) displayNameInput.value = record.display_name || "";
   if (employmentStatusInput) employmentStatusInput.value = record.employment_status || "active";
-  if (targetOrganizationInput) targetOrganizationInput.value = "";
+  if (currentOrganizationInput) {
+    currentOrganizationInput.value = record.primary_organization_name || record.primary_organization_code || "미배정";
+  }
   if (jobFamilyInput) jobFamilyInput.value = record.job_family || "";
   if (emailInput) emailInput.value = record.email || "";
+  if (pickerSelect) pickerSelect.value = record.employee_number || "";
   renderOrganizationAdminPreviews();
 }
 
@@ -3132,6 +3202,149 @@ function summarizeDirectMembers(workforceItems, organizationCode) {
       body: `${[...new Set(directMembers.map((item) => item.job_family).filter(Boolean))].slice(0, 3).join(", ") || "미지정"} 중심으로 구성됩니다.`,
     },
   ];
+}
+
+function getDirectOrganizationMembers(organizationCode) {
+  return organizationAdminState.workforce
+    .filter((item) => item.primary_organization_code === organizationCode)
+    .sort((left, right) => left.employee_number.localeCompare(right.employee_number));
+}
+
+function getOrganizationLeaderRecord(organizationCode) {
+  const employeeNumber = getOrganizationLeaderEmployeeNumber(organizationCode);
+  if (!employeeNumber) return null;
+  const leader = organizationAdminState.workforce.find((item) => item.employee_number === employeeNumber) || null;
+  if (!leader || leader.primary_organization_code !== organizationCode || leader.employment_status === "inactive") {
+    setOrganizationLeaderEmployeeNumber(organizationCode, "");
+    return null;
+  }
+  return leader;
+}
+
+function renderOrganizationLeaderControls(organizationCode) {
+  const summary = document.getElementById("organization-leader-summary");
+  const select = document.getElementById("organization-leader-select");
+  const status = document.getElementById("organization-leader-status");
+  const directMembers = getDirectOrganizationMembers(organizationCode);
+  const currentLeader = getOrganizationLeaderRecord(organizationCode);
+
+  if (summary) {
+    summary.textContent = currentLeader
+      ? `${currentLeader.display_name} (${currentLeader.employee_number}) 가 현재 조직 리더입니다.`
+      : "직속 구성원을 기준으로 조직 리더를 지정합니다.";
+  }
+
+  if (select) {
+    if (!organizationCode) {
+      select.innerHTML = '<option value="">조직을 먼저 선택하세요.</option>';
+      select.disabled = true;
+    } else if (!directMembers.length) {
+      select.innerHTML = '<option value="">직속 구성원이 없어 리더를 지정할 수 없습니다.</option>';
+      select.disabled = true;
+    } else {
+      select.disabled = false;
+      select.innerHTML = [
+        '<option value="">직속 구성원을 선택하세요.</option>',
+        ...directMembers.map(
+          (item) =>
+            `<option value="${escapeHtml(item.employee_number)}">${escapeHtml(item.display_name)} · ${escapeHtml(
+              item.employee_number,
+            )} · ${escapeHtml(item.job_family || "미지정")}</option>`,
+        ),
+      ].join("");
+      select.value = currentLeader?.employee_number || "";
+    }
+  }
+
+  if (status && !organizationCode) {
+    status.textContent = "선택 조직의 직속 구성원 중에서 리더를 지정할 수 있습니다.";
+  }
+}
+
+function getSelectedOrganizationMember() {
+  const selectedEmployeeNumber = organizationAdminState.selectedMemberEmployeeNumber;
+  if (!selectedEmployeeNumber) return null;
+  return (
+    organizationAdminState.workforce.find((item) => item.employee_number === selectedEmployeeNumber) || null
+  );
+}
+
+function getAssignableOrganizationMembers(organizationCode) {
+  return organizationAdminState.workforce
+    .filter((item) => item.employment_status !== "inactive")
+    .filter((item) => item.primary_organization_code !== organizationCode)
+    .sort((left, right) => {
+      const leftOrg = left.primary_organization_name || "";
+      const rightOrg = right.primary_organization_name || "";
+      return `${left.display_name}${left.employee_number}${leftOrg}`.localeCompare(
+        `${right.display_name}${right.employee_number}${rightOrg}`,
+      );
+    });
+}
+
+function renderOrganizationDirectMembersTable(organizationCode) {
+  const target = document.getElementById("organization-direct-members-body");
+  if (!target) return;
+
+  const rows = getDirectOrganizationMembers(organizationCode);
+
+  if (!rows.length) {
+    target.innerHTML = `<tr><td colspan="5">선택 조직의 직속 구성원이 없습니다.</td></tr>`;
+    return;
+  }
+
+  const selectedEmployeeNumber = organizationAdminState.selectedMemberEmployeeNumber;
+  target.innerHTML = rows
+    .map(
+      (item) => `<tr
+          data-employee-number="${escapeHtml(item.employee_number)}"
+          data-display-name="${escapeHtml(item.display_name)}"
+          data-employment-status="${escapeHtml(item.employment_status)}"
+          data-job-family="${escapeHtml(item.job_family || "")}"
+          data-email="${escapeHtml(item.email || "")}"
+          data-primary-organization-code="${escapeHtml(item.primary_organization_code || "")}"
+          data-primary-organization-name="${escapeHtml(item.primary_organization_name || "")}"
+          class="${selectedEmployeeNumber === item.employee_number ? "active-row" : ""}"
+        >
+          <td class="mono">${escapeHtml(item.employee_number)}</td>
+          <td>${escapeHtml(item.display_name)}</td>
+          <td>${escapeHtml(item.employment_status)}</td>
+          <td>${escapeHtml(item.job_family || "미지정")}</td>
+          <td><button class="table-inline-action" type="button">선택</button></td>
+        </tr>`,
+    )
+    .join("");
+}
+
+function renderOrganizationMemberPicker(organizationCode) {
+  const picker = document.getElementById("organization-member-picker");
+  const select = document.getElementById("organization-member-existing-select");
+  if (!picker || !select) return;
+
+  picker.hidden = !organizationAdminState.memberPickerOpen;
+  const options = getAssignableOrganizationMembers(organizationCode);
+  const currentValue = select.value;
+
+  if (!options.length) {
+    select.innerHTML = '<option value="">선택 가능한 등록 인력이 없습니다.</option>';
+    select.disabled = true;
+    return;
+  }
+
+  select.disabled = false;
+  select.innerHTML = [
+    '<option value="">등록 인력을 선택하세요.</option>',
+    ...options.map(
+      (item) =>
+        `<option value="${escapeHtml(item.employee_number)}">${escapeHtml(item.display_name)} · ${escapeHtml(
+          item.employee_number,
+        )} · ${escapeHtml(item.primary_organization_name || "미배정")}</option>`,
+    ),
+  ].join("");
+
+  if (options.some((item) => item.employee_number === currentValue)) {
+    select.value = currentValue;
+  }
 }
 
 async function createOrganizationDummyData(baseUrl) {
@@ -3505,27 +3718,6 @@ async function loadOrganizationsAdminLiveData() {
         : summarizeSelectedOrganization(organizationItems, workforceItems, effectiveSelectedCode),
       "선택 조직 요약이 없습니다.",
     );
-    renderTableRows(
-      "organization-direct-members-body",
-      workforceItems
-        .filter((item) => item.primary_organization_code === effectiveSelectedCode)
-        .slice(0, 8)
-        .map(
-          (item) =>
-            `<tr data-employee-number="${escapeHtml(item.employee_number)}" data-display-name="${escapeHtml(
-              item.display_name,
-            )}" data-employment-status="${escapeHtml(
-              item.employment_status,
-            )}" data-job-family="${escapeHtml(item.job_family || "")}" data-email="${escapeHtml(
-              item.email || "",
-            )}"><td class="mono">${escapeHtml(item.employee_number)}</td><td>${escapeHtml(
-              item.display_name,
-            )}</td><td><div class="table-cell-action"><span>${escapeHtml(
-              item.job_family || "미지정",
-            )}</span><button class="table-inline-action" type="button">배치</button></div></td></tr>`,
-        ),
-      "선택 조직의 직속 구성원이 없습니다.",
-    );
     renderOrganizationSelectionState();
     renderBulletSummary(
       "organization-direct-members-summary",
@@ -3571,12 +3763,22 @@ async function loadOrganizationsAdminLiveData() {
     );
     organizationAdminState.organizations = organizationItems;
     organizationAdminState.workforce = workforceItems;
+    const currentSelectedMember = workforceItems.find(
+      (item) => item.employee_number === organizationAdminState.selectedMemberEmployeeNumber,
+    );
+    if (currentSelectedMember?.primary_organization_code !== effectiveSelectedCode) {
+      const firstDirectMember =
+        workforceItems.find((item) => item.primary_organization_code === effectiveSelectedCode) || null;
+      setSelectedOrganizationMemberEmployeeNumber(firstDirectMember?.employee_number || "");
+    }
+    renderOrganizationLeaderControls(effectiveSelectedCode);
+    renderOrganizationDirectMembersTable(effectiveSelectedCode);
+    renderOrganizationMemberPicker(effectiveSelectedCode);
     renderOrganizationDirectoryAndTree();
     if (selectedRecord) {
       populateOrganizationForm(selectedRecord);
       syncOrganizationSelectionToWorkforce(selectedRecord);
-      const selectedMember =
-        workforceItems.find((item) => item.primary_organization_code === selectedRecord.organization_code) || null;
+      const selectedMember = getSelectedOrganizationMember();
       populateOrganizationMemberForm(selectedMember, selectedRecord.organization_code);
     } else {
       renderOrganizationAdminPreviews();
@@ -3604,6 +3806,7 @@ async function loadOrganizationsAdminLiveData() {
     renderBulletSummary("organization-member-history-summary", [], "구성원 이동 이력을 불러오지 못했습니다.");
     renderBulletSummary("organization-action-preview", [], "조직 영향 미리보기를 계산하지 못했습니다.");
     renderBulletSummary("organization-member-action-preview", [], "구성원 영향 미리보기를 계산하지 못했습니다.");
+    renderOrganizationLeaderControls(getSelectedOrganizationCode());
     populateOrganizationMemberForm(null, getSelectedOrganizationCode());
     const treePanel = document.getElementById("organization-tree-panel");
     if (treePanel) {
@@ -3696,63 +3899,63 @@ function setupOrganizationAdminActions(load) {
   const saveButton = document.getElementById("organization-save-button");
   const deleteButton = document.getElementById("organization-delete-button");
   const status = document.getElementById("organization-action-status");
-  if (!saveButton || !deleteButton || !status) return;
+  if (saveButton && deleteButton && status) {
+    saveButton.addEventListener("click", async () => {
+      const baseUrl = getActiveApiBaseUrl();
+      const organizationCode = document.getElementById("organization-code-input")?.value.trim();
+      const organizationName = document.getElementById("organization-name-input")?.value.trim();
+      const parentOrganizationCode = document.getElementById("organization-parent-input")?.value.trim();
+      const organizationStatus = document.getElementById("organization-status-input")?.value.trim();
+      const effectiveFrom = document.getElementById("organization-effective-from-input")?.value.trim();
+      const effectiveTo = document.getElementById("organization-effective-to-input")?.value.trim();
 
-  saveButton.addEventListener("click", async () => {
-    const baseUrl = getActiveApiBaseUrl();
-    const organizationCode = document.getElementById("organization-code-input")?.value.trim();
-    const organizationName = document.getElementById("organization-name-input")?.value.trim();
-    const parentOrganizationCode = document.getElementById("organization-parent-input")?.value.trim();
-    const organizationStatus = document.getElementById("organization-status-input")?.value.trim();
-    const effectiveFrom = document.getElementById("organization-effective-from-input")?.value.trim();
-    const effectiveTo = document.getElementById("organization-effective-to-input")?.value.trim();
-
-    if (!organizationCode || !organizationName || !organizationStatus) {
-      status.textContent = "조직 코드, 조직명, 상태는 필수입니다.";
-      return;
-    }
-
-    status.textContent = "조직 등록/수정 요청 중입니다.";
-
-    try {
-      await sendJson(baseUrl, "admin/master-data/organizations", "POST", {
-        organization_code: organizationCode,
-        organization_name: organizationName,
-        parent_organization_code: parentOrganizationCode || null,
-        organization_status: organizationStatus,
-        effective_from: effectiveFrom || null,
-        effective_to: effectiveTo || null,
-      });
-      status.textContent = `조직 ${organizationCode} 저장이 완료되었습니다.`;
-      setSelectedOrganizationCode(organizationCode);
-      await load();
-    } catch (error) {
-      status.textContent = `조직 저장 실패: ${error.message}`;
-    }
-  });
-
-  deleteButton.addEventListener("click", async () => {
-    const baseUrl = getActiveApiBaseUrl();
-    const organizationCode = document.getElementById("organization-code-input")?.value.trim();
-
-    if (!organizationCode) {
-      status.textContent = "삭제할 조직 코드를 입력하세요.";
-      return;
-    }
-
-    status.textContent = "조직 삭제 요청 중입니다.";
-
-    try {
-      await sendJson(baseUrl, `admin/master-data/organizations/${organizationCode}`, "DELETE");
-      status.textContent = `조직 ${organizationCode} 삭제가 완료되었습니다.`;
-      if (getSelectedOrganizationCode() === organizationCode) {
-        setSelectedOrganizationCode("");
+      if (!organizationCode || !organizationName || !organizationStatus) {
+        status.textContent = "조직 코드, 조직명, 상태는 필수입니다.";
+        return;
       }
-      await load();
-    } catch (error) {
-      status.textContent = `조직 삭제 실패: ${error.message}`;
-    }
-  });
+
+      status.textContent = "조직 등록/수정 요청 중입니다.";
+
+      try {
+        await sendJson(baseUrl, "admin/master-data/organizations", "POST", {
+          organization_code: organizationCode,
+          organization_name: organizationName,
+          parent_organization_code: parentOrganizationCode || null,
+          organization_status: organizationStatus,
+          effective_from: effectiveFrom || null,
+          effective_to: effectiveTo || null,
+        });
+        status.textContent = `조직 ${organizationCode} 저장이 완료되었습니다.`;
+        setSelectedOrganizationCode(organizationCode);
+        await load();
+      } catch (error) {
+        status.textContent = `조직 저장 실패: ${error.message}`;
+      }
+    });
+
+    deleteButton.addEventListener("click", async () => {
+      const baseUrl = getActiveApiBaseUrl();
+      const organizationCode = document.getElementById("organization-code-input")?.value.trim();
+
+      if (!organizationCode) {
+        status.textContent = "삭제할 조직 코드를 입력하세요.";
+        return;
+      }
+
+      status.textContent = "조직 삭제 요청 중입니다.";
+
+      try {
+        await sendJson(baseUrl, `admin/master-data/organizations/${organizationCode}`, "DELETE");
+        status.textContent = `조직 ${organizationCode} 삭제가 완료되었습니다.`;
+        if (getSelectedOrganizationCode() === organizationCode) {
+          setSelectedOrganizationCode("");
+        }
+        await load();
+      } catch (error) {
+        status.textContent = `조직 삭제 실패: ${error.message}`;
+      }
+    });
+  }
 
   const memberSaveButton = document.getElementById("organization-member-save-button");
   const memberRemoveButton = document.getElementById("organization-member-remove-button");
@@ -3761,9 +3964,6 @@ function setupOrganizationAdminActions(load) {
     memberSaveButton.addEventListener("click", async () => {
       const baseUrl = getActiveApiBaseUrl();
       const organizationCode = document.getElementById("organization-member-organization-code-input")?.value.trim();
-      const targetOrganizationCode = document
-        .getElementById("organization-member-target-organization-code-input")
-        ?.value.trim();
       const employeeNumber = document.getElementById("organization-member-employee-number-input")?.value.trim();
       const displayName = document.getElementById("organization-member-display-name-input")?.value.trim();
       const employmentStatus = document
@@ -3773,41 +3973,37 @@ function setupOrganizationAdminActions(load) {
       const email = document.getElementById("organization-member-email-input")?.value.trim();
 
       if (!organizationCode || !employeeNumber) {
-        memberStatus.textContent = "대상 조직과 사번은 필수입니다.";
+        memberStatus.textContent = "선택 조직과 등록 인력을 먼저 고르세요.";
         return;
       }
 
-      memberStatus.textContent = "직속 구성원 저장 요청 중입니다.";
+      const member = organizationAdminState.workforce.find((item) => item.employee_number === employeeNumber) || null;
+      if (!member) {
+        memberStatus.textContent = "이 화면에서는 이미 등록된 인력만 배치할 수 있습니다. 신규 인력은 인력 관리에서 등록하세요.";
+        return;
+      }
+      if (member.primary_organization_code === organizationCode) {
+        memberStatus.textContent = `${employeeNumber} 는 이미 현재 조직에 배치되어 있습니다.`;
+        return;
+      }
+
+      memberStatus.textContent = "등록 인력을 선택 조직에 배치하는 중입니다.";
 
       try {
-        if (targetOrganizationCode) {
-          await sendJson(
-            baseUrl,
-            `admin/master-data/organizations/${organizationCode}/members/${employeeNumber}`,
-            "PATCH",
-            {
-              display_name: displayName || null,
-              employment_status: employmentStatus || null,
-              primary_organization_code: targetOrganizationCode,
-              job_family: jobFamily || null,
-              email: email || null,
-            },
-          );
-          setSelectedOrganizationCode(targetOrganizationCode);
-        } else {
-          await sendJson(baseUrl, `admin/master-data/organizations/${organizationCode}/members`, "POST", {
-            employee_number: employeeNumber,
-            display_name: displayName,
-            employment_status: employmentStatus || "active",
-            job_family: jobFamily || null,
-            email: email || null,
-          });
-          setSelectedOrganizationCode(organizationCode);
-        }
-        memberStatus.textContent = `직속 구성원 ${employeeNumber} 저장이 완료되었습니다.`;
+        await sendJson(baseUrl, "admin/master-data/workforce", "POST", {
+          employee_number: employeeNumber,
+          display_name: displayName,
+          employment_status: employmentStatus || "active",
+          primary_organization_code: organizationCode,
+          job_family: jobFamily || null,
+          email: email || null,
+        });
+        organizationAdminState.memberPickerOpen = false;
+        setSelectedOrganizationMemberEmployeeNumber(employeeNumber);
+        memberStatus.textContent = `구성원 ${employeeNumber} 를 현재 조직에 배치했습니다.`;
         await load();
       } catch (error) {
-        memberStatus.textContent = `직속 구성원 저장 실패: ${error.message}`;
+        memberStatus.textContent = `구성원 배치 실패: ${error.message}`;
       }
     });
 
@@ -3815,24 +4011,41 @@ function setupOrganizationAdminActions(load) {
       const baseUrl = getActiveApiBaseUrl();
       const organizationCode = document.getElementById("organization-member-organization-code-input")?.value.trim();
       const employeeNumber = document.getElementById("organization-member-employee-number-input")?.value.trim();
+      const displayName = document.getElementById("organization-member-display-name-input")?.value.trim();
+      const employmentStatus = document
+        .getElementById("organization-member-employment-status-input")
+        ?.value.trim();
+      const jobFamily = document.getElementById("organization-member-job-family-input")?.value.trim();
+      const email = document.getElementById("organization-member-email-input")?.value.trim();
 
       if (!organizationCode || !employeeNumber) {
-        memberStatus.textContent = "대상 조직과 사번은 필수입니다.";
+        memberStatus.textContent = "선택 조직과 등록 인력을 먼저 고르세요.";
         return;
       }
 
-      memberStatus.textContent = "직속 구성원 제거 요청 중입니다.";
+      const member = organizationAdminState.workforce.find((item) => item.employee_number === employeeNumber) || null;
+      if (!member || member.primary_organization_code !== organizationCode) {
+        memberStatus.textContent = "현재 조직에 배치된 구성원을 선택해야 해제할 수 있습니다.";
+        return;
+      }
+
+      memberStatus.textContent = "선택 조직에서 구성원을 해제하는 중입니다.";
 
       try {
-        await sendJson(
-          baseUrl,
-          `admin/master-data/organizations/${organizationCode}/members/${employeeNumber}`,
-          "DELETE",
-        );
-        memberStatus.textContent = `직속 구성원 ${employeeNumber} 비활성화가 완료되었습니다.`;
+        await sendJson(baseUrl, "admin/master-data/workforce", "POST", {
+          employee_number: employeeNumber,
+          display_name: displayName,
+          employment_status: employmentStatus || "active",
+          primary_organization_code: null,
+          job_family: jobFamily || null,
+          email: email || null,
+        });
+        organizationAdminState.memberPickerOpen = true;
+        setSelectedOrganizationMemberEmployeeNumber(employeeNumber);
+        memberStatus.textContent = `구성원 ${employeeNumber} 를 현재 조직에서 해제했습니다.`;
         await load();
       } catch (error) {
-        memberStatus.textContent = `직속 구성원 제거 실패: ${error.message}`;
+        memberStatus.textContent = `구성원 해제 실패: ${error.message}`;
       }
     });
   }
@@ -3841,13 +4054,13 @@ function setupOrganizationAdminActions(load) {
   if (dummyButton) {
     dummyButton.addEventListener("click", async () => {
       const baseUrl = getActiveApiBaseUrl();
-      status.textContent = "사업부 · 팀 · 그룹 · 파트 더미 데이터를 생성하는 중입니다.";
+      if (status) status.textContent = "사업부 · 팀 · 그룹 · 파트 더미 데이터를 생성하는 중입니다.";
       try {
         await createOrganizationDummyData(baseUrl);
-        status.textContent = "더미 데이터 생성이 완료되었습니다.";
+        if (status) status.textContent = "더미 데이터 생성이 완료되었습니다.";
         await load();
       } catch (error) {
-        status.textContent = `더미 데이터 생성 실패: ${error.message}`;
+        if (status) status.textContent = `더미 데이터 생성 실패: ${error.message}`;
       }
     });
   }
@@ -4125,6 +4338,7 @@ function setupOrganizationAdminActions(load) {
       const businessUnit = getOrganizationByCode(organizationAdminState.organizations, businessUnitCode);
       if (!businessUnit) return;
       setSelectedBusinessUnitCode(businessUnitCode);
+      setOrganizationDirectoryScope("business_unit");
       const selectedCode = getSelectedOrganizationCode();
       const selectedRoot = selectedCode
         ? getBusinessUnitCodeForOrganization(organizationAdminState.organizations, selectedCode)
@@ -4145,7 +4359,7 @@ function setupOrganizationAdminActions(load) {
     memberTable.addEventListener("click", (event) => {
       const row = event.target.closest("tr[data-employee-number]");
       if (!row) return;
-      activateOrganizationWorkbenchTab("member");
+      organizationAdminState.memberPickerOpen = false;
       populateOrganizationMemberForm(
         {
           employee_number: row.dataset.employeeNumber || "",
@@ -4153,9 +4367,80 @@ function setupOrganizationAdminActions(load) {
           employment_status: row.dataset.employmentStatus || "active",
           job_family: row.dataset.jobFamily || "",
           email: row.dataset.email || "",
+          primary_organization_code: row.dataset.primaryOrganizationCode || "",
+          primary_organization_name: row.dataset.primaryOrganizationName || "",
         },
         getSelectedOrganizationCode(),
       );
+      renderOrganizationMemberPicker(getSelectedOrganizationCode());
+      renderOrganizationSelectionState();
+    });
+  }
+
+  const organizationMemberAddButton = document.getElementById("organization-member-add-button");
+  if (organizationMemberAddButton) {
+    organizationMemberAddButton.addEventListener("click", () => {
+      const organizationCode = getSelectedOrganizationCode();
+      if (!organizationCode) return;
+      organizationAdminState.memberPickerOpen = !organizationAdminState.memberPickerOpen;
+      renderOrganizationMemberPicker(organizationCode);
+      if (organizationAdminState.memberPickerOpen) {
+        populateOrganizationMemberForm(null, organizationCode);
+        document.getElementById("organization-member-existing-select")?.focus();
+      }
+    });
+  }
+
+  const organizationMemberSelect = document.getElementById("organization-member-existing-select");
+  if (organizationMemberSelect) {
+    organizationMemberSelect.addEventListener("change", (event) => {
+      const employeeNumber = event.target.value || "";
+      const record =
+        organizationAdminState.workforce.find((item) => item.employee_number === employeeNumber) || null;
+      populateOrganizationMemberForm(record, getSelectedOrganizationCode());
+      renderOrganizationSelectionState();
+    });
+  }
+
+  const organizationLeaderSaveButton = document.getElementById("organization-leader-save-button");
+  const organizationLeaderClearButton = document.getElementById("organization-leader-clear-button");
+  const organizationLeaderSelect = document.getElementById("organization-leader-select");
+  const organizationLeaderStatus = document.getElementById("organization-leader-status");
+
+  if (organizationLeaderSaveButton && organizationLeaderSelect && organizationLeaderStatus) {
+    organizationLeaderSaveButton.addEventListener("click", () => {
+      const organizationCode = getSelectedOrganizationCode();
+      const employeeNumber = organizationLeaderSelect.value || "";
+      const directMembers = getDirectOrganizationMembers(organizationCode);
+      const leader = directMembers.find((item) => item.employee_number === employeeNumber) || null;
+
+      if (!organizationCode) {
+        organizationLeaderStatus.textContent = "리더를 지정할 조직을 먼저 선택하세요.";
+        return;
+      }
+      if (!leader) {
+        organizationLeaderStatus.textContent = "직속 구성원 중 한 명을 선택해야 리더를 지정할 수 있습니다.";
+        return;
+      }
+
+      setOrganizationLeaderEmployeeNumber(organizationCode, employeeNumber);
+      renderOrganizationLeaderControls(organizationCode);
+      renderOrganizationSelectionState();
+      organizationLeaderStatus.textContent = `${leader.display_name} 을 ${organizationCode} 조직 리더로 지정했습니다.`;
+    });
+  }
+
+  if (organizationLeaderClearButton && organizationLeaderStatus) {
+    organizationLeaderClearButton.addEventListener("click", () => {
+      const organizationCode = getSelectedOrganizationCode();
+      if (!organizationCode) {
+        organizationLeaderStatus.textContent = "리더를 해제할 조직을 먼저 선택하세요.";
+        return;
+      }
+      setOrganizationLeaderEmployeeNumber(organizationCode, "");
+      renderOrganizationLeaderControls(organizationCode);
+      renderOrganizationSelectionState();
+      organizationLeaderStatus.textContent = `${organizationCode} 조직의 리더 지정을 해제했습니다.`;
     });
   }
 
@@ -4165,7 +4450,10 @@ function setupOrganizationAdminActions(load) {
     element.addEventListener("input", () => {
       renderOrganizationDirectoryAndTree();
     });
-    element.addEventListener("change", () => {
+    element.addEventListener("change", (event) => {
+      if (id === "organization-directory-scope-select") {
+        setOrganizationDirectoryScope(event.target.value);
+      }
       renderOrganizationDirectoryAndTree();
     });
   });
@@ -4174,9 +4462,8 @@ function setupOrganizationAdminActions(load) {
   if (organizationFilterResetButton) {
     organizationFilterResetButton.addEventListener("click", () => {
       const searchInput = document.getElementById("organization-directory-search-input");
-      const scopeSelect = document.getElementById("organization-directory-scope-select");
       if (searchInput) searchInput.value = "";
-      if (scopeSelect) scopeSelect.value = "business_unit";
+      setOrganizationDirectoryScope("business_unit");
       renderOrganizationDirectoryAndTree();
     });
   }
@@ -4186,7 +4473,6 @@ function setupOrganizationAdminActions(load) {
     "organization-parent-input",
     "organization-member-organization-code-input",
     "organization-member-employee-number-input",
-    "organization-member-target-organization-code-input",
   ].forEach((id) => {
     const element = document.getElementById(id);
     if (!element) return;
