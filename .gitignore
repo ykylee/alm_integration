@@ -3,3 +3,6 @@ auth.json
 .omx/
 backend/target/
 .env
+__pycache__/
+*.py[cod]
+*.egg-info/

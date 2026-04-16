@@ -4,7 +4,7 @@
 - 범위: `docs/` 아래 모든 문서
 - 대상 독자: 기획자, 개발자, 운영자, 프로젝트 참여자
 - 상태: draft
-- 최종 수정일: 2026-04-08
+- 최종 수정일: 2026-04-16
 - 관련 문서: `AGENTS.md`
 
 ## 문서 읽기 흐름
@@ -25,6 +25,11 @@
 - 연계 위키: [integrations/README.md](./integrations/README.md)
 - 운영 위키: [operations/README.md](./operations/README.md)
 - 작업 백로그 인덱스: [operations/work_backlog.md](./operations/work_backlog.md)
+- 세션 인계 문서: [operations/session_handoff.md](./operations/session_handoff.md)
+- 워크플로우 개발 계획: [operations/workflow_development_plan.md](./operations/workflow_development_plan.md)
+- 표준 작업 워크플로우 초안: [operations/standard_workflow_draft.md](./operations/standard_workflow_draft.md)
+- 개발 환경 및 테스트 환경 가이드: [operations/development_environment.md](./operations/development_environment.md)
+- 환경 기록 위키: [operations/environments/README.md](./operations/environments/README.md)
 - 운영 UI 렌더 점검 및 기능 시나리오: [operations/backend_operation_ui_render_and_scenarios.md](./operations/backend_operation_ui_render_and_scenarios.md)
 
 ## 카테고리 안내

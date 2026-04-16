@@ -4,8 +4,8 @@
 - 범위: `docs/operations/backlog/` 아래의 일자별 백로그 문서
 - 대상 독자: 프로젝트 참여자, 문서 작성자, 개발자, 운영자
 - 상태: draft
-- 최종 수정일: 2026-04-09
-- 관련 문서: `AGENTS.md`, `docs/README.md`, `docs/operations/README.md`
+- 최종 수정일: 2026-04-16
+- 관련 문서: `AGENTS.md`, `docs/README.md`, `docs/operations/README.md`, `docs/operations/session_handoff.md`
 
 ## 문서 위치
 
@@ -15,12 +15,16 @@
 ## 운영 원칙
 
 - 세션이 처음 시작되면 본 인덱스와 최근 날짜의 백로그 문서를 먼저 확인한다.
+- 새 세션이나 새 호스트 환경에서 시작할 때는 먼저 `docs/operations/session_handoff.md` 를 확인하고, 이후 본 인덱스와 최신 백로그로 내려간다.
 - `in_progress` 또는 `blocked` 상태 작업이 있으면 우선 후속 조치 필요 여부를 정리한다.
 - 모든 작업은 시작 전에 브리핑 후 해당 일자의 백로그 문서에 등록한다.
 - 백로그 문서는 `docs/operations/backlog/YYYY-MM-DD.md` 형식으로 생성한다.
 - 작업 중에는 진행 현황과 영향 문서 확인 결과를 해당 일자 문서에 갱신한다.
 - 작업 완료 시 상태를 `done` 으로 변경하고 결과를 기록한다.
 - 상태값은 `planned`, `in_progress`, `blocked`, `done` 을 사용한다.
+- 환경에 따라 달라지는 설치/검증 이력은 `docs/operations/environments/<hostname>-<ip>/` 아래에 별도 기록한다.
+- 호스트와 IP가 불명확한 기존 환경 기록은 `docs/operations/environments/env_old/` 아래에서 관리한다.
+- 세션 종료 전에는 `docs/operations/session_handoff.md` 를 갱신해 다음 세션이 바로 시작할 수 있게 현재 상태를 요약한다.
 
 ## 날짜별 백로그 문서
 
@@ -31,3 +35,5 @@
 - [2026-04-07](./backlog/2026-04-07.md)
 - [2026-04-08](./backlog/2026-04-08.md)
 - [2026-04-09](./backlog/2026-04-09.md)
+- [2026-04-15](./backlog/2026-04-15.md)
+- [2026-04-16](./backlog/2026-04-16.md)

@@ -23,6 +23,7 @@
 - `docs/requirements/` 요구사항, 유스케이스, 제약사항, 우선순위
 - `docs/architecture/` 아키텍처, 데이터 흐름, 연계 구조, 기술 선택
 - `docs/operations/` 운영 절차, 배포, 장애 대응, 권한 관리
+- `docs/operations/environments/` 호스트별 개발/테스트 환경 기록, 설치 이력, 환경 제약 사항
 - `docs/integrations/` 외부 시스템 연계 사양, 인터페이스, 매핑 규칙
 - `docs/decisions/` ADR, 주요 설계 의사결정 기록
 
@@ -64,16 +65,20 @@
 작업 시작 규칙:
 
 - 세션이 처음 시작되면 작업에 착수하기 전에 `docs/operations/work_backlog.md` 와 최근 날짜의 백로그 문서를 먼저 확인한다.
+- 새 세션이나 새 호스트 환경에서 시작할 때는 `docs/operations/session_handoff.md` 를 가장 먼저 확인하고, 이어서 `docs/operations/work_backlog.md` 와 최근 날짜의 백로그 문서를 확인한다.
 - 진행 중(`in_progress`) 또는 차단(`blocked`) 상태의 작업이 있으면 우선 이어서 처리할 작업, 확인이 필요한 작업, 종료된 작업을 구분해 정리한다.
 - 작업을 시작하기 전에 수행 목적, 범위, 예상 산출물, 영향 가능 문서를 짧게 브리핑한다.
 - 브리핑 후 작업 항목을 백로그 문서에 등록한다.
 - 백로그 문서는 날짜별로 생성하며 기본 위치는 `docs/operations/backlog/YYYY-MM-DD.md` 형식을 사용한다.
 - 날짜별 백로그 파일이 없으면 작업 시작 시 새로 생성한다.
+- 환경에 따라 달라지는 설치 상태, 도구 가용성, 검증 이력은 `docs/operations/environments/<hostname>-<ip>/` 아래에 별도 기록한다.
+- 기존 환경 기록 중 작업 호스트와 IP가 불명확한 내용은 `docs/operations/environments/env_old/` 아래로 정리한다.
+- 세션 종료 전에는 `docs/operations/session_handoff.md` 를 갱신해 진행 중 작업, 차단 작업, 최근 완료 작업, 잔여 작업 우선순위를 정리한다.
 
 백로그 작성 기준:
 
 - 각 작업은 고유 ID를 가진다. 예: `TASK-001`
-- 최소 항목으로 `작업명`, `상태`, `우선순위`, `요청일`, `담당`, `영향 문서`, `작업 내용`, `진행 현황`, `완료 기준`, `작업 결과`를 포함한다.
+- 최소 항목으로 `작업명`, `상태`, `우선순위`, `요청일`, `담당`, `호스트명`, `호스트 IP`, `영향 문서`, `작업 내용`, `진행 현황`, `완료 기준`, `작업 결과`, `다음 세션 시작 포인트`, `남은 리스크`, `후속 작업`을 포함한다.
 - 상태값은 `planned`, `in_progress`, `blocked`, `done` 중 하나를 사용한다.
 - 작업 시작 시 `planned` 또는 `in_progress` 로 등록한다.
 - 작업 중간에는 주요 진행 상황, 결정 사항, 범위 변경, 확인한 영향 문서를 백로그에 갱신한다.
@@ -88,6 +93,7 @@
 - 작업 결과가 기존 개요, 요구사항, 아키텍처, 운영 문서에 영향을 주면 해당 문서를 함께 수정한다.
 - 문서 변경이 필요 없다고 판단한 경우에도 백로그에 그 판단을 남긴다.
 - 과제 컨셉 관련 지시가 들어오면 최소한 `CRS`와 관련 `SRS` 문서를 영향 범위 후보에 포함해 확인한다.
+- 세션 인계 흐름에 영향을 주는 변경은 `docs/operations/session_handoff.md` 와 `docs/operations/standard_workflow_draft.md` 를 함께 확인한다.
 
 권장 백로그 항목 예시:
 
@@ -99,6 +105,8 @@
 - 요청일: YYYY-MM-DD
 - 완료일:
 - 담당: Codex
+- 호스트명:
+- 호스트 IP:
 - 영향 문서:
   - docs/overview/...
   - docs/requirements/...
@@ -107,6 +115,9 @@
   - YYYY-MM-DD HH:MM 진행 내용
 - 완료 기준:
 - 작업 결과:
+- 다음 세션 시작 포인트:
+- 남은 리스크:
+- 후속 작업:
 ```
 
 ## Build, Test, and Development Commands

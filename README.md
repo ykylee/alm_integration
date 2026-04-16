@@ -46,14 +46,19 @@
 - `make test` 임시 Python 테스트 실행
 - `make infra-up` 로컬 `PostgreSQL` 컨테이너 실행
 - `make infra-down` 로컬 `PostgreSQL` 컨테이너 종료
+- `make infra-wait` 로컬 `PostgreSQL` readiness 대기
 - `make backend-run` Rust 백엔드 실행
 - `make backend-test` Rust 백엔드 테스트 실행
+- `make container-test-python` Python 테스트를 격리 컨테이너에서 실행
+- `make container-test-rust` Rust 테스트를 격리 컨테이너와 컨테이너 DB에서 실행
+- `make container-test` Python/Rust 테스트를 컨테이너에서 일괄 실행
+- `make container-backend-run` Rust 백엔드를 컨테이너에서 실행
 - `cargo run --manifest-path backend/Cargo.toml` Rust 백엔드 실행
 - `cargo test --manifest-path backend/Cargo.toml` Rust 백엔드 테스트 실행
 
 ## 로컬 백엔드 개발 환경
 
-Rust 백엔드 검증은 로컬 `PostgreSQL` 이 필요합니다. 기본 개발 환경은 저장소 루트의 [`docker-compose.yml`](./docker-compose.yml) 과 [`.env.example`](./.env.example) 를 기준으로 맞춥니다.
+Rust 백엔드 검증은 로컬 `PostgreSQL` 이 필요합니다. 기본 개발 환경은 저장소 루트의 [`docker-compose.yml`](./docker-compose.yml), [`.env.example`](./.env.example), [`.env.docker.example`](./.env.docker.example) 를 기준으로 맞춥니다.
 
 기본 절차:
 
@@ -62,6 +67,26 @@ Rust 백엔드 검증은 로컬 `PostgreSQL` 이 필요합니다. 기본 개발 
 - `make backend-test`
 
 테스트에서 임시 DB 생성 경로를 사용하므로 `ALM_BACKEND_TEST_DATABASE_ADMIN_URL` 은 `postgres` 데이터베이스를 가리켜야 합니다.
+
+## 격리된 테스트 환경
+
+테스트는 가능하면 컨테이너에서 실행하는 것을 권장합니다. `Makefile` 은 `docker` 와 `podman` 둘 다를 대상으로 사용할 수 있도록 `CONTAINER_RUNTIME` 변수를 지원합니다.
+
+예시:
+
+- `CONTAINER_RUNTIME=docker make container-test-python`
+- `CONTAINER_RUNTIME=docker make container-test-rust`
+- `CONTAINER_RUNTIME=podman make infra-up`
+- `CONTAINER_RUNTIME=podman make container-test-rust`
+
+`docker compose` 사용 시에는 다음 경로도 사용할 수 있습니다.
+
+- `docker compose up -d postgres`
+- `docker compose --profile test run --rm python-test`
+- `docker compose --profile test run --rm backend-test`
+- `docker compose --profile dev up backend-dev`
+
+현재 세션처럼 `compose` 플러그인이 없으면 `container-*` 대상 사용을 우선 권장합니다.
 
 ## 운영 UI 프로토타입 실데이터 연결
 
@@ -84,3 +109,5 @@ Rust 백엔드 검증은 로컬 `PostgreSQL` 이 필요합니다. 기본 개발 
 ## 참고
 
 최신 작업 이력과 운영 규칙은 `docs/operations/` 아래 문서를 기준으로 확인합니다.
+
+- 개발 환경 및 테스트 환경 가이드: [`docs/operations/development_environment.md`](./docs/operations/development_environment.md)

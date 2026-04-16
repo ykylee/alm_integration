@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:17
+    image: docker.io/library/postgres:17
     container_name: alm-postgres
     restart: unless-stopped
     environment:
@@ -16,6 +16,60 @@ services:
       retries: 20
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - alm
+
+  python-test:
+    profiles: ["test"]
+    build:
+      context: .
+      dockerfile: docker/python-test.Dockerfile
+    working_dir: /workspace
+    command: ["bash", "-lc", "python -m pip install --upgrade pip && python -m pip install -e '.[dev]' && pytest"]
+    volumes:
+      - .:/workspace:Z
+    networks:
+      - alm
+
+  backend-test:
+    profiles: ["test"]
+    build:
+      context: .
+      dockerfile: docker/rust-test.Dockerfile
+    working_dir: /workspace
+    env_file:
+      - .env.docker.example
+    command: ["cargo", "test", "--manifest-path", "backend/Cargo.toml", "--", "--nocapture"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - .:/workspace:Z
+    networks:
+      - alm
+
+  backend-dev:
+    profiles: ["dev"]
+    build:
+      context: .
+      dockerfile: docker/rust-test.Dockerfile
+    working_dir: /workspace
+    env_file:
+      - .env.docker.example
+    command: ["cargo", "run", "--manifest-path", "backend/Cargo.toml"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/workspace:Z
+    networks:
+      - alm
 
 volumes:
   postgres_data:
+
+networks:
+  alm:
+    name: alm-integration-net
