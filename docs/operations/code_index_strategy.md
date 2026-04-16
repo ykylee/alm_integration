@@ -94,7 +94,7 @@
 
 - `docs/README.md`
 - `docs/operations/README.md`
-- 향후 `ai_agent_quickstart.md`
+- `docs/operations/ai_agent_quickstart.md`
 
 역할:
 

@@ -72,9 +72,9 @@
 - 과거 백로그 전체를 다시 읽지 않고도 현재 기준선을 빠르게 복원
 - 작업 상태와 환경 상태를 분리해서 파악
 
-분리 대상:
+상세 절차:
 
-- 세션 시작/종료 상세 절차는 향후 `workflow_session_handoff.md` 로 분리
+- [workflow_session_handoff.md](./workflow_session_handoff.md)
 
 ### 4.2 작업 시작 및 브리핑
 
@@ -102,9 +102,9 @@
 - 남은 리스크
 - 후속 작업
 
-분리 대상:
+상세 절차:
 
-- 작업 시작, 브리핑, 백로그 기록, 작업 종료 기록은 향후 `workflow_task_execution.md` 로 분리
+- [workflow_task_execution.md](./workflow_task_execution.md)
 
 ### 4.3 환경 확인
 
@@ -140,9 +140,9 @@
 - 환경 호환 문제가 있으면 저장소 기본값으로 흡수할 수 있는지 먼저 검토한다.
 - 테스트 실패가 환경 문제가 아니라 기대값 문제면, 실제 동작 기준으로 테스트를 바로잡는다.
 
-분리 대상:
+상세 절차:
 
-- 구현 전후 문서 갱신 판단과 상호 링크 규칙은 향후 `workflow_documentation_sync.md` 로 분리
+- [workflow_documentation_sync.md](./workflow_documentation_sync.md)
 
 ### 4.5 로컬 검증
 
@@ -194,9 +194,9 @@
 - 정적 UI 확인: `python3 -m http.server 8000`
 - 브라우저 증적: `output/playwright/...`
 
-분리 대상:
+상세 절차:
 
-- 로컬, 격리, 실행 검증 절차는 향후 `workflow_validation.md` 로 분리
+- [workflow_validation.md](./workflow_validation.md)
 
 ### 4.8 결과 기록 및 세션 종료 정리
 
@@ -237,15 +237,15 @@
 향후 추가 대상 문서:
 
 - `document_sync_policy.md`
-- `code_index_strategy.md`
-- `ai_agent_quickstart.md`
-- `branch_merge_document_policy.md`
+- [code_index_strategy.md](./code_index_strategy.md)
+- [ai_agent_quickstart.md](./ai_agent_quickstart.md)
+- [branch_merge_document_policy.md](./branch_merge_document_policy.md)
 - `workflow_automation_plan.md`
 
 ## 6. 현재 초안의 한계
 
-- 아직 상세 절차 문서가 분리되기 전이므로, 일부 단계 설명이 이 문서에 남아 있다.
-- 문서화 동기화 기준과 코드 색인 기준은 아직 별도 문서로 확정되지 않았다.
+- 허브 문서에도 단계 요약은 남아 있으므로, 세부 절차와 중복되지 않도록 요약 수준을 유지해야 한다.
+- `document_sync_policy.md` 와 `workflow_automation_plan.md` 는 아직 별도 문서로 정리되지 않았다.
 - PR 생성, 배포, 운영 장애 대응 흐름은 별도 표준 절차 문서로 더 세분화할 필요가 있다.
 - 팀 역할별 승인 흐름과 리뷰 기준은 후속 문서로 보강해야 한다.
 
@@ -264,6 +264,7 @@
 - 로컬/격리/실행 검증 워크플로우 상세판
 - 코드 색인 전략
 - AI agent 빠른 참조 문서
+- 브랜치 병합 문서 정책
 - 자동화 계획
 
 ## 다음에 읽을 문서

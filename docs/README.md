@@ -33,6 +33,8 @@
 - 세션 인계 워크플로우: [operations/workflow_session_handoff.md](./operations/workflow_session_handoff.md)
 - 검증 워크플로우: [operations/workflow_validation.md](./operations/workflow_validation.md)
 - 코드 색인 전략: [operations/code_index_strategy.md](./operations/code_index_strategy.md)
+- AI agent 빠른 참조 문서: [operations/ai_agent_quickstart.md](./operations/ai_agent_quickstart.md)
+- 브랜치 병합 문서 정책: [operations/branch_merge_document_policy.md](./operations/branch_merge_document_policy.md)
 - 개발 환경 및 테스트 환경 가이드: [operations/development_environment.md](./operations/development_environment.md)
 - 환경 기록 위키: [operations/environments/README.md](./operations/environments/README.md)
 - 운영 UI 렌더 점검 및 기능 시나리오: [operations/backend_operation_ui_render_and_scenarios.md](./operations/backend_operation_ui_render_and_scenarios.md)
