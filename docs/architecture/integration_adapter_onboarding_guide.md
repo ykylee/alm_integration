@@ -21,14 +21,14 @@
 
 관련 코드 위치:
 
-- 공통 어댑터 인터페이스와 레지스트리: [mod.rs](/home/yklee/repos/alm_integration/backend/src/adapters/mod.rs)
-- 수신 경로: [ingestion.rs](/home/yklee/repos/alm_integration/backend/src/http/routes/ingestion.rs)
-- `pull` 실행 경로: [pull_sync.rs](/home/yklee/repos/alm_integration/backend/src/services/pull_sync.rs)
+- 공통 어댑터 인터페이스와 레지스트리: [mod.rs](../../backend/src/adapters/mod.rs)
+- 수신 경로: [ingestion.rs](../../backend/src/http/routes/ingestion.rs)
+- `pull` 실행 경로: [pull_sync.rs](../../backend/src/services/pull_sync.rs)
 - 예시 시스템:
-  - [jira.rs](/home/yklee/repos/alm_integration/backend/src/adapters/jira.rs)
-  - [bitbucket.rs](/home/yklee/repos/alm_integration/backend/src/adapters/bitbucket.rs)
-  - [bamboo.rs](/home/yklee/repos/alm_integration/backend/src/adapters/bamboo.rs)
-  - [confluence.rs](/home/yklee/repos/alm_integration/backend/src/adapters/confluence.rs)
+  - [jira.rs](../../backend/src/adapters/jira.rs)
+  - [bitbucket.rs](../../backend/src/adapters/bitbucket.rs)
+  - [bamboo.rs](../../backend/src/adapters/bamboo.rs)
+  - [confluence.rs](../../backend/src/adapters/confluence.rs)
 
 현재 구조의 핵심 원칙:
 
@@ -189,7 +189,7 @@ impl PushEventAdapter for FooPushAdapter {
 
 ### 4.4 레지스트리 등록
 
-새 adapter 를 만들었으면 [mod.rs](/home/yklee/repos/alm_integration/backend/src/adapters/mod.rs)의 `build_registry_from_endpoint_configs()` 와 `build_default_registry()` 경로를 함께 확인한다.
+새 adapter 를 만들었으면 [mod.rs](../../backend/src/adapters/mod.rs)의 `build_registry_from_endpoint_configs()` 와 `build_default_registry()` 경로를 함께 확인한다.
 
 현재 구조:
 

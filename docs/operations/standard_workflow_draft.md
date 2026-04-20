@@ -4,7 +4,7 @@
 - 범위: 표준 작업 흐름의 공통 원칙, 단계 요약, 세부 문서 분리 기준, 문서 간 진입 경로
 - 대상 독자: 개발자, 운영자, 리뷰어, 문서 작성자
 - 상태: draft
-- 최종 수정일: 2026-04-16
+- 최종 수정일: 2026-04-17
 - 관련 문서: `docs/operations/work_backlog.md`, `docs/operations/session_handoff.md`, `docs/operations/workflow_development_plan.md`, `docs/operations/development_environment.md`, `docs/operations/environments/README.md`, `AGENTS.md`
 
 ## 1. 문서 개요
@@ -231,21 +231,24 @@
 
 - [작업 진행 워크플로우](./workflow_task_execution.md)
 - [문서화 및 동기화 워크플로우](./workflow_documentation_sync.md)
+- [문서 동기화 정책](./document_sync_policy.md)
 - [세션 인계 워크플로우](./workflow_session_handoff.md)
 - [검증 워크플로우](./workflow_validation.md)
+- [워크플로우 자동화 계획](./workflow_automation_plan.md)
+- [표준 워크플로우 구성안](./workflow_standard_composition_proposal.md)
+- [워크플로우 agent 토폴로지](./workflow_agent_topology.md)
 
 향후 추가 대상 문서:
 
-- `document_sync_policy.md`
 - [code_index_strategy.md](./code_index_strategy.md)
 - [ai_agent_quickstart.md](./ai_agent_quickstart.md)
 - [branch_merge_document_policy.md](./branch_merge_document_policy.md)
-- `workflow_automation_plan.md`
+- `domain_code_index.md`
 
 ## 6. 현재 초안의 한계
 
 - 허브 문서에도 단계 요약은 남아 있으므로, 세부 절차와 중복되지 않도록 요약 수준을 유지해야 한다.
-- `document_sync_policy.md` 와 `workflow_automation_plan.md` 는 아직 별도 문서로 정리되지 않았다.
+- 도메인 또는 기능 단위 색인 문서는 아직 별도 문서로 정리되지 않았다.
 - PR 생성, 배포, 운영 장애 대응 흐름은 별도 표준 절차 문서로 더 세분화할 필요가 있다.
 - 팀 역할별 승인 흐름과 리뷰 기준은 후속 문서로 보강해야 한다.
 
@@ -266,6 +269,8 @@
 - AI agent 빠른 참조 문서
 - 브랜치 병합 문서 정책
 - 자동화 계획
+- 표준 워크플로우 구성안
+- 워크플로우 agent 토폴로지
 
 ## 다음에 읽을 문서
 

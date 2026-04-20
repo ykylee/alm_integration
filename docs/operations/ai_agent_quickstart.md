@@ -4,7 +4,7 @@
 - 범위: 세션 시작 순서, 질문 유형별 읽기 경로, 빠른 파일 탐색 키, 작업 전후 체크리스트
 - 대상 독자: AI agent, 개발자, 문서 작성자
 - 상태: draft
-- 최종 수정일: 2026-04-16
+- 최종 수정일: 2026-04-17
 - 관련 문서: `docs/operations/session_handoff.md`, `docs/operations/workflow_task_execution.md`, `docs/operations/workflow_documentation_sync.md`, `docs/operations/workflow_validation.md`, `docs/operations/code_index_strategy.md`, `docs/README.md`, `AGENTS.md`
 
 ## 1. 문서 개요
@@ -94,9 +94,14 @@
 - 작업 절차 허브: [standard_workflow_draft.md](./standard_workflow_draft.md)
 - 작업 실행 절차: [workflow_task_execution.md](./workflow_task_execution.md)
 - 문서 동기화 절차: [workflow_documentation_sync.md](./workflow_documentation_sync.md)
+- 문서 동기화 정책: [document_sync_policy.md](./document_sync_policy.md)
 - 세션 인계 절차: [workflow_session_handoff.md](./workflow_session_handoff.md)
 - 검증 절차: [workflow_validation.md](./workflow_validation.md)
 - 색인 구조 기준: [code_index_strategy.md](./code_index_strategy.md)
+- 표준 워크플로우 구성안: [workflow_standard_composition_proposal.md](./workflow_standard_composition_proposal.md)
+- 워크플로우 agent 토폴로지: [workflow_agent_topology.md](./workflow_agent_topology.md)
+- 운영 UI-백엔드 계약: [admin_ui_backend_contract.md](./admin_ui_backend_contract.md)
+- 운영 UI 자동화 셀렉터 계약: [ui_automation_selector_contract.md](./ui_automation_selector_contract.md)
 - 문서 위키 홈: [../README.md](../README.md)
 
 ## 5. 빠른 파일 탐색 키
@@ -168,9 +173,11 @@
 
 현재 quickstart 다음 우선순위 문서는 아래와 같다.
 
-1. `workflow_automation_plan.md`
+1. [workflow_automation_plan.md](./workflow_automation_plan.md)
 2. 도메인 또는 기능 단위 색인 문서 초안
-3. `document_sync_policy.md` 의 독립 유지 여부 정리
+3. `workflow_automation_plan.md` 의 우선순위 1 항목 실제 구현
+4. 운영 UI 사업부 탭 명시 셀렉터 확정과 자동화 재검증
+5. 표준 워크플로우 공통 코어와 프로젝트 프로파일 분리 설계
 
 병합 관련 기준 문서:
 
@@ -181,7 +188,13 @@
 - [세션 인계 문서](./session_handoff.md)
 - [작업 진행 워크플로우](./workflow_task_execution.md)
 - [문서화 및 동기화 워크플로우](./workflow_documentation_sync.md)
+- [문서 동기화 정책](./document_sync_policy.md)
 - [검증 워크플로우](./workflow_validation.md)
 - [코드 색인 전략](./code_index_strategy.md)
 - [브랜치 병합 문서 정책](./branch_merge_document_policy.md)
+- [워크플로우 자동화 계획](./workflow_automation_plan.md)
+- [표준 워크플로우 구성안](./workflow_standard_composition_proposal.md)
+- [워크플로우 agent 토폴로지](./workflow_agent_topology.md)
+- [운영 UI-백엔드 계약 매핑](./admin_ui_backend_contract.md)
+- [운영 UI 자동화 셀렉터 계약](./ui_automation_selector_contract.md)
 - [운영 위키](./README.md)

@@ -1,11 +1,11 @@
 # 운영 UI 렌더 점검 및 기능 동작 시나리오
 
 - 문서 목적: 운영 UI 프로토타입의 실데이터 연결 상태를 점검하고, 현재 구현된 기능의 재현 가능한 동작 시나리오를 정리한다.
-- 범위: `src/ui_prototype/admin.html`, `src/ui_prototype/organization.html`, Rust 관리자 API, 로컬 개발 환경 기준 확인 절차
+- 범위: `src/ui_prototype/admin.html`, `src/ui_prototype/organization.html`, `src/ui_prototype/data_organizations.html`, `src/ui_prototype/data_workforce.html`, Rust 관리자 API, 로컬 개발 환경 기준 확인 절차
 - 대상 독자: 백엔드 개발자, 프론트엔드 개발자, 운영자, QA 담당자
 - 상태: draft
-- 최종 수정일: 2026-04-08
-- 관련 문서: `docs/overview/ui_ux_prototype.md`, `docs/architecture/current_backend_implementation_status_summary.md`, `README.md`, `docs/operations/backlog/2026-04-08.md`
+- 최종 수정일: 2026-04-17
+- 관련 문서: `docs/overview/ui_ux_prototype.md`, `docs/architecture/current_backend_implementation_status_summary.md`, `docs/architecture/admin_ui_code_index.md`, `README.md`, `docs/operations/backlog/2026-04-17.md`
 
 ## 문서 위치
 
@@ -15,9 +15,10 @@
 
 ## 1. 점검 개요
 
-2026-04-08 기준 운영 UI 프로토타입은 정적 설명 화면을 넘어 실제 관리자 API 를 조회할 수 있는 상태다. 이번 점검의 목적은 다음 두 가지다.
+2026-04-17 기준 운영 UI 프로토타입은 정적 설명 화면을 넘어 실제 관리자 API 를 조회하고, 일부 화면에서는 조직/인력 운영 액션까지 수행할 수 있는 상태다. 이번 점검의 목적은 다음 세 가지다.
 
-- 로컬 환경에서 `admin`/`organization` 화면이 실제 API 를 읽는 경로가 살아 있는지 확인한다.
+- 로컬 환경에서 `admin`/`organization`/`data_organizations`/`data_workforce` 화면이 실제 API 를 읽는 경로가 살아 있는지 확인한다.
+- 조직/인력 관리용 액션 폼이 어떤 관리자 API 와 맞물리는지 문서 기준선을 갱신한다.
 - 현재까지 구현된 기능을 운영자가 어떤 순서로 확인하고 사용할 수 있는지 시나리오 형태로 정리한다.
 
 ## 2. 이번 점검에서 실제 확인한 항목
@@ -25,7 +26,7 @@
 ### 2.1 서버 가동 확인
 
 - Rust 백엔드: `http://127.0.0.1:8080/api/v1/health` 에서 `{"status":"ok"}` 응답 확인
-- 정적 UI 서버: `http://127.0.0.1:8000/src/ui_prototype/admin.html`, `http://127.0.0.1:8000/src/ui_prototype/organization.html` 모두 `200 OK` 응답 확인
+- 정적 UI 서버: `admin.html`, `organization.html`, `data_organizations.html`, `data_workforce.html` 모두 `200 OK` 응답 기준으로 점검
 - 로컬 `PostgreSQL`: `alm-postgres` 컨테이너가 `healthy` 상태임을 확인
 
 ### 2.2 운영 API 응답 확인
@@ -47,6 +48,7 @@
   - 운영 UI HTML 파일이 정적 서버에서 정상 서빙된다.
   - 화면이 호출하는 관리자 API 경로는 로컬 백엔드에서 정상 응답한다.
   - `app.js` 문법 검증은 `node --check src/ui_prototype/app.js` 로 통과했다.
+  - `data_organizations.html` 과 `data_workforce.html` 이 공통 데이터 관리 내비게이션과 API Base URL 기반 연결 구조를 공유함을 코드 기준으로 확인했다.
 - 환경 제약으로 미완료:
   - Playwright 브라우저 바이너리가 설치되지 않아 자동 스크린샷 캡처를 수행하지 못했다.
   - Safari 자동 DOM 추출은 AppleEvent timeout 으로 완료하지 못했다.
@@ -73,6 +75,8 @@ python3 -m http.server 8000
 
 - 관리자 콘솔: `http://127.0.0.1:8000/src/ui_prototype/admin.html?apiBase=http://127.0.0.1:8080/api/v1`
 - 조직 운영: `http://127.0.0.1:8000/src/ui_prototype/organization.html?apiBase=http://127.0.0.1:8080/api/v1`
+- 조직 관리: `http://127.0.0.1:8000/src/ui_prototype/data_organizations.html?apiBase=http://127.0.0.1:8080/api/v1`
+- 인력 관리: `http://127.0.0.1:8000/src/ui_prototype/data_workforce.html?apiBase=http://127.0.0.1:8080/api/v1`
 
 ### 3.3 최소 데이터 준비
 
@@ -205,6 +209,74 @@ curl -X POST http://127.0.0.1:8080/api/v1/admin/sync-runs \
 - 상단 메트릭에 실행 건수, 활성 조직 수, 활성 인력 수가 표시된다.
 - `API 커버리지` 패널에 현재 운영 화면이 읽고 있는 API 범위가 요약된다.
 
+### 4.6 시나리오 F: 조직 관리 작업면에서 구조와 이력 확인
+
+목적:
+
+- 운영자가 `data_organizations.html` 에서 선택 조직 기준 구조 정보와 이력을 한 작업면에서 확인한다.
+
+사전 조건:
+
+- 조직 1건 이상이 존재해야 한다.
+
+단계:
+
+1. `data_organizations.html` 을 연다.
+2. 좌측 디렉터리 또는 목록에서 대상 조직을 선택한다.
+3. 중앙 인스펙터에서 상위 경로, 직속 하위 조직, 직속 구성원을 확인한다.
+4. 변경 이력 또는 구성원 이동 이력 영역을 확인한다.
+
+기대 결과:
+
+- 선택 조직 기준 구조 정보가 `structure` 조회 결과와 일치해야 한다.
+- 조직 변경 이력과 구성원 이동 이력이 각각 별도 패널에 표시되어야 한다.
+- 데이터가 없으면 빈 상태 메시지가 보여야 한다.
+
+### 4.7 시나리오 G: 조직 관리 작업면에서 구성원 이동 액션 준비 확인
+
+목적:
+
+- 조직 관리 작업면이 단순 조회가 아니라 구성원 배치 변경 액션을 수행할 준비가 되어 있는지 확인한다.
+
+사전 조건:
+
+- 이동 대상 조직 코드와 대상 구성원이 존재해야 한다.
+
+단계:
+
+1. `data_organizations.html` 을 연다.
+2. 조직 구성원 액션 영역에서 대상 구성원을 선택한다.
+3. `target organization code` 입력에 이동 대상 조직 코드를 넣는다.
+4. 이동 또는 비활성화 액션 버튼 흐름을 확인한다.
+
+기대 결과:
+
+- 액션 폼이 선택 조직 컨텍스트와 함께 표시된다.
+- 입력 요소는 명시적 셀렉터 기반으로 노출되며, 자동화 검증 시 기준점으로 삼을 수 있다.
+- 실제 API 호출 전후 상태 메시지 설계가 필요한 영역이 드러나야 한다.
+
+### 4.8 시나리오 H: 인력 관리 작업면에서 조직 범위 기반 탐색
+
+목적:
+
+- 인력 관리 작업면에서 조직 범위 필터와 선택 인력 상세가 함께 동작하는지 확인한다.
+
+사전 조건:
+
+- 인력 1건 이상이 존재해야 한다.
+
+단계:
+
+1. `data_workforce.html` 을 연다.
+2. 조직 코드 또는 검색 조건을 입력한다.
+3. 목록에서 인력을 선택한다.
+4. 인스펙터에서 소속 조직, 기본 인적 정보, 후속 액션 영역을 확인한다.
+
+기대 결과:
+
+- 조직 범위가 바뀌면 목록과 선택 인력 상세가 함께 갱신된다.
+- 인력 상세에는 운영자가 이동/비활성화 판단에 필요한 맥락 정보가 표시된다.
+
 ## 5. 현재 점검 기준 데이터 상태
 
 이번 점검 종료 시점의 로컬 데이터 상태는 다음과 같다.
@@ -222,6 +294,6 @@ curl -X POST http://127.0.0.1:8080/api/v1/admin/sync-runs \
 
 ## 6. 다음 확인 과제
 
-- 브라우저 바이너리가 있는 환경에서 Playwright 또는 실제 브라우저 스크린샷으로 픽셀 렌더링 재확인
+- 브라우저 바이너리가 있는 환경에서 Playwright 또는 실제 브라우저 스크린샷으로 `data_organizations`/`data_workforce` 까지 픽셀 렌더링 재확인
 - `project/work_item` 실데이터 적재 후 `organization`/`admin` 화면 목록 렌더링 재검증
-- 조회 중심 화면에서 `POST`/취소 같은 운영 액션 버튼을 추가하고 동작 시나리오 확장
+- 조직/인력 액션 성공·실패 시 사용자 피드백과 자동화 셀렉터를 문서와 함께 고정

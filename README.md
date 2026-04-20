@@ -90,13 +90,13 @@ Rust 백엔드 검증은 로컬 `PostgreSQL` 이 필요합니다. 기본 개발 
 
 ## 운영 UI 프로토타입 실데이터 연결
 
-정적 운영 UI 프로토타입은 브라우저에서 바로 열 수 있고, `organization.html`, `admin.html` 은 실제 Rust 백엔드 API 와도 연결할 수 있습니다.
+정적 운영 UI 프로토타입은 브라우저에서 바로 열 수 있고, `organization.html`, `admin.html`, `data_organizations.html`, `data_workforce.html` 은 현재 Rust 백엔드 관리자 API 와 연결되는 기준 화면입니다.
 
 - 정적 파일 서버 실행: `python3 -m http.server`
 - Rust 백엔드 실행: `cargo run --manifest-path backend/Cargo.toml`
 - 기본 API 기준 URL: `http://127.0.0.1:8080/api/v1`
 
-브라우저에서 `http://localhost:8000/src/ui_prototype/admin.html` 또는 `http://localhost:8000/src/ui_prototype/organization.html` 로 접속한 뒤, 화면 상단의 `API Base URL` 입력값을 조정하면 됩니다.
+브라우저에서 `http://localhost:8000/src/ui_prototype/admin.html`, `organization.html`, `data_organizations.html`, `data_workforce.html` 로 접속한 뒤, 화면 상단의 `API Base URL` 입력값을 조정하면 됩니다.
 
 ## 기술 스택 검토 상태
 
@@ -111,3 +111,4 @@ Rust 백엔드 검증은 로컬 `PostgreSQL` 이 필요합니다. 기본 개발 
 최신 작업 이력과 운영 규칙은 `docs/operations/` 아래 문서를 기준으로 확인합니다.
 
 - 개발 환경 및 테스트 환경 가이드: [`docs/operations/development_environment.md`](./docs/operations/development_environment.md)
+- 표준 워크플로우 별도 저장소: [standard_ai_workflow](https://github.com/ykylee/standard_ai_workflow)

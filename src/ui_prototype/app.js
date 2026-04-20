@@ -772,6 +772,16 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+function toDomToken(value) {
+  return (
+    String(value ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "item"
+  );
+}
+
 function getQueryApiBaseUrl() {
   const params = new URLSearchParams(window.location.search);
   return params.get("apiBase");
@@ -1864,10 +1874,15 @@ function renderBusinessUnitTabs(organizations, workforceItems) {
           subtreeCodes.includes(member.primary_organization_code) &&
           member.employment_status !== "inactive",
       ).length;
+      const tabId = `organization-division-tab-${toDomToken(item.organization_code)}`;
 
       return `<button class="org-division-tab${
         selectedBusinessUnitCode === item.organization_code ? " active" : ""
-      }" type="button" data-business-unit-code="${escapeHtml(item.organization_code)}"><strong>${escapeHtml(
+      }" id="${escapeHtml(tabId)}" type="button" role="tab" aria-selected="${
+        selectedBusinessUnitCode === item.organization_code ? "true" : "false"
+      }" data-testid="organization-division-tab" data-org-division-tab="${escapeHtml(
+        item.organization_code,
+      )}" data-business-unit-code="${escapeHtml(item.organization_code)}"><strong>${escapeHtml(
         item.organization_name,
       )}</strong><small>${escapeHtml(item.organization_code)} · 하위 ${escapeHtml(
         String(Math.max(subtreeCodes.length - 1, 0)),

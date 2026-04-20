@@ -1,11 +1,11 @@
 # 통합 백엔드 구현 현황 요약
 
-- 문서 목적: 2026-04-08 시점의 데이터 통합 백엔드 구현 범위, 실행 흐름, 남은 공백을 한눈에 정리한다.
-- 범위: `backend/` 구현 상태, 주요 API, 데이터 통합 파이프라인, 운영 UI 준비 전 점검 결과
+- 문서 목적: 2026-04-17 시점의 데이터 통합 백엔드 구현 범위, 실행 흐름, 운영 UI 연결 상태, 남은 공백을 한눈에 정리한다.
+- 범위: `backend/` 구현 상태, 주요 API, 데이터 통합 파이프라인, 운영 UI 및 데이터 관리 화면과 연결되는 관리자 표면
 - 대상 독자: 백엔드 개발자, 프론트엔드 개발자, 아키텍트, 운영자
 - 상태: draft
-- 최종 수정일: 2026-04-08
-- 관련 문서: `docs/architecture/integration_backend_design_plan.md`, `docs/architecture/integration_backend_implementation_rollout_and_checklist_draft.md`, `docs/architecture/service_classification_and_msa_assessment_draft.md`, `docs/operations/backlog/2026-04-08.md`
+- 최종 수정일: 2026-04-17
+- 관련 문서: `docs/architecture/integration_backend_design_plan.md`, `docs/architecture/integration_backend_implementation_rollout_and_checklist_draft.md`, `docs/architecture/service_classification_and_msa_assessment_draft.md`, `docs/architecture/backend_code_index.md`, `docs/operations/backlog/2026-04-17.md`
 
 ## 문서 위치
 
@@ -15,9 +15,9 @@
 
 ## 1. 한눈에 보는 현재 상태
 
-현재 백엔드는 단순 스캐폴딩 단계를 넘어, 데이터 통합의 핵심 수직 슬라이스를 이미 실행 가능한 형태로 갖췄다. `pull` 과 `push` 모두 원시 적재, 표준화, 식별자 매핑, 참조 해소, 도메인 반영까지 연결되어 있고, 조직/인사 기준정보도 동일 파이프라인 안에서 자동 반영된다.
+현재 백엔드는 단순 스캐폴딩 단계를 넘어, 데이터 통합의 핵심 수직 슬라이스를 실행 가능한 형태로 갖췄다. `pull` 과 `push` 모두 원시 적재, 표준화, 식별자 매핑, 참조 해소, 도메인 반영까지 연결되어 있고, 조직/인사 기준정보도 같은 파이프라인 안에서 자동 반영된다.
 
-운영 관점에서도 최소 관리자 API 는 확보됐다. `sync-runs`, `master-data`, `projects`, `work-items` 조회가 가능하므로, 운영 UI 는 이제 완전히 빈 상태가 아니라 이 API 들을 연결하는 단계로 진입할 수 있다.
+운영 관점에서도 최소 관리자 API 를 넘어 실제 데이터 관리 화면이 붙을 수 있는 표면이 형성됐다. `sync-runs`, `master-data`, `projects`, `work-items` 조회뿐 아니라 `sync-runs` 재시도/취소, 조직/인력 등록·수정·삭제, 조직 구조/이력 조회까지 포함하므로, 현재 운영 UI 문서는 조회 중심 설명에서 액션 중심 설명으로 함께 갱신돼야 한다.
 
 ## 2. 구현된 런타임 흐름
 
@@ -92,7 +92,7 @@ flowchart TB
 | 업무 항목 계층 | 구현됨 | 부모-자식 단일 링크 최소선 반영 |
 | 계획 링크 | 부분 구현 | `iteration` 최소선만 연결, `release/milestone` 미구현 |
 | 운영 조회 API | 구현됨 | `projects`, `work-items` 목록과 최소 필터 제공 |
-| 운영 UI | 부분 구현 | `organization`, `admin` 화면에서 실제 운영 API 조회 가능, 등록/수정 액션은 아직 |
+| 운영 UI | 부분 구현 | `admin`, `organization`, `data_organizations`, `data_workforce`, `data_settings` 화면이 현재 관리자 API 와 연결 가능한 상태 |
 | 정합성 운영 플랫폼 | 미구현 | 이슈 큐, 재처리 운영 API, 대시보드는 후순위 |
 
 ## 5. 현재 제공 API 범위
@@ -103,14 +103,24 @@ flowchart TB
 - `POST /api/v1/admin/sync-runs`
 - `GET /api/v1/admin/sync-runs`
 - `GET /api/v1/admin/sync-runs/{run_id}`
+- `POST /api/v1/admin/sync-runs/{run_id}/retry`
 - `POST /api/v1/admin/sync-runs/{run_id}/cancel`
 
 ### 5.2 기준정보/조회 API
 
 - `GET /api/v1/admin/master-data/organizations`
 - `POST /api/v1/admin/master-data/organizations`
+- `PATCH /api/v1/admin/master-data/organizations/{organization_code}`
+- `DELETE /api/v1/admin/master-data/organizations/{organization_code}`
+- `GET /api/v1/admin/master-data/organizations/{organization_code}/history`
+- `GET /api/v1/admin/master-data/organizations/{organization_code}/structure`
+- `GET /api/v1/admin/master-data/organizations/{organization_code}/members`
+- `POST /api/v1/admin/master-data/organizations/{organization_code}/members`
+- `GET /api/v1/admin/master-data/organizations/{organization_code}/member-history`
 - `GET /api/v1/admin/master-data/workforce`
 - `POST /api/v1/admin/master-data/workforce`
+- `PATCH /api/v1/admin/master-data/workforce/{employee_number}`
+- `DELETE /api/v1/admin/master-data/workforce/{employee_number}`
 - `GET /api/v1/admin/projects`
 - `GET /api/v1/admin/work-items`
 
@@ -119,9 +129,10 @@ flowchart TB
 이번 점검에서 확인한 핵심 판단은 다음과 같다.
 
 - 구현된 파이프라인은 데이터 통합 백엔드의 1차 목표에 맞게 수직 슬라이스로 잘 이어져 있다.
-- 운영 UI 연결 전에 필요한 최소 조회 API 도 확보됐고, `organization`/`admin` 정적 프로토타입은 실제 API 조회까지 연결됐다.
+- 운영 UI 연결 전에 필요한 최소 조회 API 를 넘어, 조직/인력 데이터 관리 화면이 사용할 쓰기/이력 API 도 확보됐다.
+- `organization`/`admin` 정적 프로토타입뿐 아니라 `data_organizations`/`data_workforce` 작업면도 현재 관리자 API 구조와 맞물린다.
 - 다만 운영 조회 API 는 데이터베이스가 없는 상태를 정상 빈 목록처럼 보이지 않게 해야 하며, 이번 점검에서 `503 SERVICE_UNAVAILABLE` 로 보정했다.
-- 위키 인덱스 문서의 `최종 수정일` 과 핵심 문서 링크는 일부 누락이 있어 이번 점검에서 함께 정리했다.
+- 코드 탐색 기준으로는 백엔드 구조를 빠르게 읽을 수 있는 코드 인덱스 문서가 필요했고, 이번 점검에서 별도 문서로 보강했다.
 
 ## 7. 남은 공백과 다음 우선순위
 
@@ -134,10 +145,15 @@ flowchart TB
 
 ### 7.2 운영 UI 연결 전 준비 상태
 
-운영 UI 구현을 시작하기 위한 최소 준비는 완료된 상태로 본다. 현재는 `organization`/`admin` 정적 프로토타입이 아래 API 를 실제로 조회할 수 있고, 다음 단계는 조회를 넘어 등록/수정/취소 액션까지 연결하는 것이다.
+운영 UI 구현을 시작하기 위한 최소 준비는 완료된 상태로 본다. 현재는 `organization`/`admin` 화면뿐 아니라 `data_organizations`/`data_workforce` 데이터 관리 작업면도 아래 API 집합을 기준으로 확장할 수 있다. 다음 단계는 액션 성공/실패 피드백과 자동화 검증 경로를 안정화하는 것이다.
 
 - `GET /api/v1/admin/sync-runs`
+- `POST /api/v1/admin/sync-runs/{run_id}/retry`
+- `POST /api/v1/admin/sync-runs/{run_id}/cancel`
 - `GET /api/v1/admin/master-data/organizations`
+- `GET /api/v1/admin/master-data/organizations/{organization_code}/history`
+- `GET /api/v1/admin/master-data/organizations/{organization_code}/structure`
+- `GET /api/v1/admin/master-data/organizations/{organization_code}/member-history`
 - `GET /api/v1/admin/master-data/workforce`
 - `GET /api/v1/admin/projects`
 - `GET /api/v1/admin/work-items`

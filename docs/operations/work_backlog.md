@@ -4,7 +4,7 @@
 - 범위: `docs/operations/backlog/` 아래의 일자별 백로그 문서
 - 대상 독자: 프로젝트 참여자, 문서 작성자, 개발자, 운영자
 - 상태: draft
-- 최종 수정일: 2026-04-16
+- 최종 수정일: 2026-04-18
 - 관련 문서: `AGENTS.md`, `docs/README.md`, `docs/operations/README.md`, `docs/operations/session_handoff.md`
 
 ## 문서 위치
@@ -28,6 +28,8 @@
 
 ## 날짜별 백로그 문서
 
+- [2026-04-18](./backlog/2026-04-18.md)
+- [2026-04-17](./backlog/2026-04-17.md)
 - [2026-04-03](./backlog/2026-04-03.md)
 - [2026-04-04](./backlog/2026-04-04.md)
 - [2026-04-05](./backlog/2026-04-05.md)

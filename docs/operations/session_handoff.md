@@ -4,7 +4,7 @@
 - 범위: 진행 중 작업, 차단 작업, 최근 완료 작업, 잔여 작업, 환경별 검증 현황
 - 대상 독자: 개발자, 운영자, 리뷰어, 문서 작성자
 - 상태: draft
-- 최종 수정일: 2026-04-16
+- 최종 수정일: 2026-04-18
 - 관련 문서: `docs/operations/work_backlog.md`, `docs/operations/standard_workflow_draft.md`, `docs/operations/workflow_session_handoff.md`, `docs/operations/environments/README.md`
 
 ## 1. 문서 개요
@@ -56,6 +56,10 @@
 - `TASK-113` 코드 색인 전략 문서 작성 완료
 - `TASK-115` AI agent 빠른 참조 문서 작성 및 허브 정리 완료
 - `TASK-116` 브랜치 병합 문서 정책 작성 완료
+- `TASK-117` 문서 체계 현황 리뷰 및 워크플로우 기준 재정리 완료
+- `TASK-118` 구현-문서 정합성 점검 및 소스 인덱스 보강 완료
+- `TASK-119` 운영 UI 계약/셀렉터 문서 보강 및 리뷰 불일치 메모 정리 완료
+- `TASK-120` 표준 워크플로우 구성안 및 agent 확장 설계 정리 완료
 
 최근 완료 작업의 의미:
 
@@ -67,13 +71,15 @@
 
 ### 우선순위 1
 
-- 세부 워크플로우 문서 분해 후 표준 워크플로우 초안의 기준 문서 전환 여부 결정
+- `workflow_automation_plan.md` 의 우선순위 1 자동화 후보를 실제 작업 항목으로 분해
+- 문서 메타데이터 검사와 허브 링크 검사 자동화 초안 착수
+- 운영 UI 사업부 탭의 명시 셀렉터 기준 확정과 자동화 재검증
+- 공통 코어 문서와 프로젝트 프로파일 템플릿 분리 여부 결정
 
 ### 우선순위 2
 
-- 자동화 계획 문서 작성
-- 백로그/환경/문서 동기화 보조 자동화 후보 설계
-- 색인 초안 문서 작성
+- 도메인 또는 기능 단위 색인 문서 초안 작성
+- 첫 ADR 필요 시 `docs/decisions/` 아래 실제 의사결정 문서 작성
 
 ### 우선순위 3
 
@@ -97,9 +103,15 @@
 - [세션 인계 워크플로우](./workflow_session_handoff.md)
 - [작업 진행 워크플로우](./workflow_task_execution.md)
 - [문서화 및 동기화 워크플로우](./workflow_documentation_sync.md)
+- [문서 동기화 정책](./document_sync_policy.md)
+- [운영 UI-백엔드 계약 매핑](./admin_ui_backend_contract.md)
+- [운영 UI 자동화 셀렉터 계약](./ui_automation_selector_contract.md)
 - [검증 워크플로우](./workflow_validation.md)
 - [코드 색인 전략](./code_index_strategy.md)
 - [AI agent 빠른 참조 문서](./ai_agent_quickstart.md)
 - [브랜치 병합 문서 정책](./branch_merge_document_policy.md)
+- [워크플로우 자동화 계획](./workflow_automation_plan.md)
+- [표준 워크플로우 구성안](./workflow_standard_composition_proposal.md)
+- [워크플로우 agent 토폴로지](./workflow_agent_topology.md)
 - [작업 백로그 인덱스](./work_backlog.md)
 - [환경 기록 위키](./environments/README.md)
