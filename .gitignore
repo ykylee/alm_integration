@@ -6,3 +6,7 @@ backend/target/
 __pycache__/
 *.py[cod]
 *.egg-info/
+.DS_Store
+.playwright-cli/
+output/playwright/**/debug/
+output/playwright/**/.DS_Store
