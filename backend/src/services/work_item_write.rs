@@ -2,6 +2,8 @@ use chrono::Utc;
 use serde::Serialize;
 use sqlx::PgPool;
 use sqlx::Row;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use uuid::Uuid;
 
@@ -84,6 +86,159 @@ impl WorkItemWriteService {
         let mut pending_hierarchy_links = Vec::new();
         let mut pending_plan_links = Vec::new();
 
+        // --- BATCH PRE-LOADING OPTIMIZATION ---
+        let mut project_keys_to_resolve = HashSet::new();
+        let mut work_item_type_codes_to_resolve = HashSet::new();
+        let mut organization_codes_to_resolve = HashSet::new();
+        let mut workforce_employee_numbers_to_resolve = HashSet::new();
+        let mut previous_status_keys_to_resolve = HashSet::new();
+
+        for row in &rows {
+            let work_item_key: String = row.get("source_object_id");
+            let source_system: String = row.get("source_system");
+            let payload_text: String = row.get("payload_reference");
+            let payload = serde_json::from_str::<serde_json::Value>(&payload_text)
+                .unwrap_or_else(|_| serde_json::json!({}));
+
+            if let Some(project_key) = payload
+                .get("project_key")
+                .and_then(|v| v.as_str())
+                .or_else(|| infer_project_key(&work_item_key))
+            {
+                project_keys_to_resolve
+                    .insert((source_system.clone(), format!("project:{}", project_key)));
+            }
+
+            if let Some(type_code) = payload
+                .get("issue_type")
+                .and_then(|v| v.as_str())
+                .map(|v| v.to_lowercase())
+            {
+                work_item_type_codes_to_resolve.insert(type_code);
+            }
+
+            if let Some(org_code) = payload
+                .get("owning_organization_code")
+                .or_else(|| payload.get("organization_code"))
+                .and_then(|v| v.as_str())
+            {
+                organization_codes_to_resolve.insert(org_code.to_string());
+            }
+
+            if let Some(assignee_emp) = payload
+                .get("assignee_employee_number")
+                .or_else(|| payload.get("assignee_id"))
+                .and_then(|v| v.as_str())
+            {
+                workforce_employee_numbers_to_resolve.insert(assignee_emp.to_string());
+            }
+
+            if let Some(reporter_emp) = payload
+                .get("reporter_employee_number")
+                .or_else(|| payload.get("reporter_id"))
+                .and_then(|v| v.as_str())
+            {
+                workforce_employee_numbers_to_resolve.insert(reporter_emp.to_string());
+            }
+
+            previous_status_keys_to_resolve.insert(work_item_key.clone());
+        }
+
+        // 1. Resolve Projects
+        let mut project_id_cache = HashMap::new();
+        for (sys, key) in project_keys_to_resolve {
+            let project_id = sqlx::query_scalar::<_, Uuid>(
+                r#"
+                select internal_entity_id
+                from identity_mapping
+                where source_system_code = $1
+                  and source_identity_key = $2
+                  and internal_entity_type = 'project'
+                  and mapping_status in ('active', 'verified')
+                order by updated_at desc
+                limit 1
+                "#,
+            )
+            .bind(&sys)
+            .bind(&key)
+            .fetch_optional(&self.pool)
+            .await?;
+            if let Some(pid) = project_id {
+                project_id_cache.insert((sys, key), pid);
+            }
+        }
+
+        // 2. Resolve Work Item Types
+        let mut work_item_type_cache = HashMap::new();
+        let types_vec: Vec<String> = work_item_type_codes_to_resolve.into_iter().collect();
+        if !types_vec.is_empty() {
+            let type_rows = sqlx::query(
+                "select type_code, work_item_type_id from work_item_type where type_code = any($1) and is_active = true"
+            )
+            .bind(&types_vec)
+            .fetch_all(&self.pool)
+            .await?;
+            for row in type_rows {
+                let code: String = row.get("type_code");
+                let id: Uuid = row.get("work_item_type_id");
+                work_item_type_cache.insert(code, id);
+            }
+        }
+
+        // 3. Resolve Organizations
+        let mut organization_cache = HashMap::new();
+        let orgs_vec: Vec<String> = organization_codes_to_resolve.into_iter().collect();
+        if !orgs_vec.is_empty() {
+            let org_rows = sqlx::query(
+                "select organization_code, organization_id from organization_master where organization_code = any($1)"
+            )
+            .bind(&orgs_vec)
+            .fetch_all(&self.pool)
+            .await?;
+            for row in org_rows {
+                let code: String = row.get("organization_code");
+                let id: Uuid = row.get("organization_id");
+                organization_cache.insert(code, id);
+            }
+        }
+
+        // 4. Resolve Workforces
+        let mut workforce_cache = HashMap::new();
+        let workforces_vec: Vec<String> =
+            workforce_employee_numbers_to_resolve.into_iter().collect();
+        if !workforces_vec.is_empty() {
+            let wf_rows = sqlx::query(
+                "select employee_number, workforce_id from workforce_master where employee_number = any($1)"
+            )
+            .bind(&workforces_vec)
+            .fetch_all(&self.pool)
+            .await?;
+            for row in wf_rows {
+                let code: String = row.get("employee_number");
+                let id: Uuid = row.get("workforce_id");
+                workforce_cache.insert(code, id);
+            }
+        }
+
+        // 5. Resolve Previous Status
+        let mut previous_status_cache = HashMap::new();
+        let previous_status_vec: Vec<String> =
+            previous_status_keys_to_resolve.into_iter().collect();
+        if !previous_status_vec.is_empty() {
+            let status_rows = sqlx::query(
+                "select work_item_key, current_common_status, current_detailed_status_code from work_item where work_item_key = any($1)"
+            )
+            .bind(&previous_status_vec)
+            .fetch_all(&self.pool)
+            .await?;
+            for row in status_rows {
+                let key: String = row.get("work_item_key");
+                let common_status: String = row.get("current_common_status");
+                let detailed_status: String = row.get("current_detailed_status_code");
+                previous_status_cache.insert(key, (common_status, detailed_status));
+            }
+        }
+
         for row in &rows {
             let work_item_id: Uuid = row.get("target_entity_id");
             let source_system: String = row.get("source_system");
@@ -101,55 +256,48 @@ impl WorkItemWriteService {
                 continue;
             };
 
-            let project_id = sqlx::query_scalar::<_, Uuid>(
-                r#"
-                select internal_entity_id
-                from identity_mapping
-                where source_system_code = $1
-                  and source_identity_key = $2
-                  and internal_entity_type = 'project'
-                  and mapping_status in ('active', 'verified')
-                order by updated_at desc
-                limit 1
-                "#,
-            )
-            .bind(&source_system)
-            .bind(format!("project:{project_key}"))
-            .fetch_optional(&self.pool)
-            .await?;
+            let project_id = project_id_cache
+                .get(&(source_system.clone(), format!("project:{project_key}")))
+                .copied();
 
             let Some(project_id) = project_id else {
                 skipped_count += 1;
                 continue;
             };
 
-            let work_item_type_id = resolve_work_item_type_id(&self.pool, &payload).await?;
+            let work_item_type_id = if let Some(type_code) = payload
+                .get("issue_type")
+                .and_then(|v| v.as_str())
+                .map(|v| v.to_lowercase())
+            {
+                work_item_type_cache
+                    .get(&type_code)
+                    .copied()
+                    .unwrap_or(DEFAULT_WORK_ITEM_TYPE_ID)
+            } else {
+                DEFAULT_WORK_ITEM_TYPE_ID
+            };
+
             let (current_common_status, current_detailed_status_code) =
                 resolve_status_fields(&payload);
-            let owning_organization_id = resolve_organization_id(
-                &self.pool,
-                payload
-                    .get("owning_organization_code")
-                    .or_else(|| payload.get("organization_code"))
-                    .and_then(|value| value.as_str()),
-            )
-            .await?;
-            let assignee_workforce_id = resolve_workforce_id(
-                &self.pool,
-                payload
-                    .get("assignee_employee_number")
-                    .or_else(|| payload.get("assignee_id"))
-                    .and_then(|value| value.as_str()),
-            )
-            .await?;
-            let reporter_workforce_id = resolve_workforce_id(
-                &self.pool,
-                payload
-                    .get("reporter_employee_number")
-                    .or_else(|| payload.get("reporter_id"))
-                    .and_then(|value| value.as_str()),
-            )
-            .await?;
+
+            let owning_organization_id = payload
+                .get("owning_organization_code")
+                .or_else(|| payload.get("organization_code"))
+                .and_then(|value| value.as_str())
+                .and_then(|code| organization_cache.get(code).copied());
+
+            let assignee_workforce_id = payload
+                .get("assignee_employee_number")
+                .or_else(|| payload.get("assignee_id"))
+                .and_then(|value| value.as_str())
+                .and_then(|code| workforce_cache.get(code).copied());
+
+            let reporter_workforce_id = payload
+                .get("reporter_employee_number")
+                .or_else(|| payload.get("reporter_id"))
+                .and_then(|value| value.as_str())
+                .and_then(|code| workforce_cache.get(code).copied());
             let title = payload
                 .get("summary")
                 .and_then(|value| value.as_str())
@@ -400,64 +548,10 @@ impl WorkItemWriteService {
     }
 }
 
-async fn resolve_work_item_type_id(
-    pool: &PgPool,
-    payload: &serde_json::Value,
-) -> Result<Uuid, WorkItemWriteError> {
-    let Some(type_code) = payload
-        .get("issue_type")
-        .and_then(|value| value.as_str())
-        .map(|value| value.to_lowercase())
-    else {
-        return Ok(DEFAULT_WORK_ITEM_TYPE_ID);
-    };
-
-    let work_item_type_id = sqlx::query_scalar::<_, Uuid>(
-        "select work_item_type_id from work_item_type where type_code = $1 and is_active = true",
-    )
-    .bind(&type_code)
-    .fetch_optional(pool)
-    .await?;
-
-    Ok(work_item_type_id.unwrap_or(DEFAULT_WORK_ITEM_TYPE_ID))
-}
-
 fn infer_project_key(work_item_key: &str) -> Option<&str> {
     work_item_key
         .split_once('-')
         .map(|(project_key, _)| project_key)
-}
-
-async fn resolve_organization_id(
-    pool: &PgPool,
-    organization_code: Option<&str>,
-) -> Result<Option<Uuid>, sqlx::Error> {
-    if let Some(organization_code) = organization_code {
-        sqlx::query_scalar::<_, Uuid>(
-            "select organization_id from organization_master where organization_code = $1",
-        )
-        .bind(organization_code)
-        .fetch_optional(pool)
-        .await
-    } else {
-        Ok(None)
-    }
-}
-
-async fn resolve_workforce_id(
-    pool: &PgPool,
-    employee_number: Option<&str>,
-) -> Result<Option<Uuid>, sqlx::Error> {
-    if let Some(employee_number) = employee_number {
-        sqlx::query_scalar::<_, Uuid>(
-            "select workforce_id from workforce_master where employee_number = $1",
-        )
-        .bind(employee_number)
-        .fetch_optional(pool)
-        .await
-    } else {
-        Ok(None)
-    }
 }
 
 fn resolve_status_fields(payload: &serde_json::Value) -> (String, String) {
