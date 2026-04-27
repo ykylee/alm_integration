@@ -65,10 +65,10 @@ async fn applies_migrations_to_empty_postgres_database() -> anyhow::Result<()> {
             "raw_ingestion_event".to_string(),
             "work_item".to_string(),
             "work_item_hierarchy".to_string(),
-            "workforce_change_log".to_string(),
             "work_item_plan_link".to_string(),
             "work_item_status_history".to_string(),
             "work_item_type".to_string(),
+            "workforce_change_log".to_string(),
             "workforce_master".to_string()
         ]
     );

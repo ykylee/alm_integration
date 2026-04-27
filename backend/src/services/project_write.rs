@@ -2,6 +2,7 @@ use chrono::Utc;
 use serde::Serialize;
 use sqlx::PgPool;
 use sqlx::Row;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter};
 use uuid::Uuid;
 
@@ -66,34 +67,91 @@ impl ProjectWriteService {
 
         let processed_count = rows.len() as i32;
 
+        let mut org_codes = HashSet::new();
+        let mut emp_numbers = HashSet::new();
+
+        let mut parsed_data = Vec::with_capacity(rows.len());
+
         for row in &rows {
-            let project_id: Uuid = row.get("target_entity_id");
-            let project_code: String = row.get("source_object_id");
             let payload_text: String = row.get("payload_reference");
             let payload = serde_json::from_str::<serde_json::Value>(&payload_text)
                 .unwrap_or_else(|_| serde_json::json!({}));
+
+            let owning_organization_code = payload
+                .get("owning_organization_code")
+                .or_else(|| payload.get("organization_code"))
+                .and_then(|value| value.as_str())
+                .map(ToString::to_string);
+
+            let project_owner_employee_number = payload
+                .get("project_owner_employee_number")
+                .or_else(|| payload.get("project_owner_id"))
+                .and_then(|value| value.as_str())
+                .map(ToString::to_string);
+
+            if let Some(code) = &owning_organization_code {
+                org_codes.insert(code.clone());
+            }
+            if let Some(num) = &project_owner_employee_number {
+                emp_numbers.insert(num.clone());
+            }
+
+            parsed_data.push((
+                payload,
+                owning_organization_code,
+                project_owner_employee_number,
+            ));
+        }
+
+        let mut org_map: HashMap<String, Uuid> = HashMap::new();
+        if !org_codes.is_empty() {
+            let codes: Vec<String> = org_codes.into_iter().collect();
+            let org_rows = sqlx::query("select organization_code, organization_id from organization_master where organization_code = ANY($1)")
+                .bind(&codes)
+                .fetch_all(&self.pool)
+                .await?;
+            for r in org_rows {
+                org_map.insert(r.get("organization_code"), r.get("organization_id"));
+            }
+        }
+
+        let mut emp_map: HashMap<String, Uuid> = HashMap::new();
+        if !emp_numbers.is_empty() {
+            let nums: Vec<String> = emp_numbers.into_iter().collect();
+            let emp_rows = sqlx::query("select employee_number, workforce_id from workforce_master where employee_number = ANY($1)")
+                .bind(&nums)
+                .fetch_all(&self.pool)
+                .await?;
+            for r in emp_rows {
+                emp_map.insert(r.get("employee_number"), r.get("workforce_id"));
+            }
+        }
+
+        for (i, row) in rows.iter().enumerate() {
+            let project_id: Uuid = row.get("target_entity_id");
+            let project_code: String = row.get("source_object_id");
+            let (payload, owning_organization_code, project_owner_employee_number) =
+                &parsed_data[i];
+
             let project_name = payload
                 .get("name")
                 .and_then(|value| value.as_str())
                 .unwrap_or(&project_code);
-            let owning_organization_code = payload
-                .get("owning_organization_code")
-                .or_else(|| payload.get("organization_code"))
-                .and_then(|value| value.as_str());
-            let project_owner_employee_number = payload
-                .get("project_owner_employee_number")
-                .or_else(|| payload.get("project_owner_id"))
-                .and_then(|value| value.as_str());
+
             let description = payload
                 .get("description")
                 .and_then(|value| value.as_str())
                 .map(ToString::to_string);
-            let owning_organization_id =
-                resolve_organization_id(&self.pool, owning_organization_code)
-                    .await?
-                    .unwrap_or(DEFAULT_ORGANIZATION_ID);
-            let project_owner_workforce_id =
-                resolve_workforce_id(&self.pool, project_owner_employee_number).await?;
+
+            let owning_organization_id = owning_organization_code
+                .as_ref()
+                .and_then(|code| org_map.get(code).copied())
+                .unwrap_or(DEFAULT_ORGANIZATION_ID);
+
+            let project_owner_workforce_id = project_owner_employee_number
+                .as_ref()
+                .and_then(|num| emp_map.get(num).copied());
+
             let now = Utc::now();
 
             sqlx::query(
@@ -135,37 +193,5 @@ impl ProjectWriteService {
             processed_count,
             written_count: processed_count,
         })
-    }
-}
-
-async fn resolve_organization_id(
-    pool: &PgPool,
-    organization_code: Option<&str>,
-) -> Result<Option<Uuid>, sqlx::Error> {
-    if let Some(organization_code) = organization_code {
-        sqlx::query_scalar::<_, Uuid>(
-            "select organization_id from organization_master where organization_code = $1",
-        )
-        .bind(organization_code)
-        .fetch_optional(pool)
-        .await
-    } else {
-        Ok(None)
-    }
-}
-
-async fn resolve_workforce_id(
-    pool: &PgPool,
-    employee_number: Option<&str>,
-) -> Result<Option<Uuid>, sqlx::Error> {
-    if let Some(employee_number) = employee_number {
-        sqlx::query_scalar::<_, Uuid>(
-            "select workforce_id from workforce_master where employee_number = $1",
-        )
-        .bind(employee_number)
-        .fetch_optional(pool)
-        .await
-    } else {
-        Ok(None)
     }
 }
