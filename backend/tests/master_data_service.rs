@@ -74,7 +74,10 @@ async fn master_data_repository_upserts_and_lists_organization_and_workforce() -
     assert_eq!(organizations.len(), 3);
     assert_eq!(workforce_items.len(), 1);
     assert_eq!(workforce.employee_number, "E9001");
-    assert_eq!(workforce.primary_organization_code.as_deref(), Some("payments"));
+    assert_eq!(
+        workforce.primary_organization_code.as_deref(),
+        Some("payments")
+    );
     assert_eq!(workforce_items[0].display_name, "박연계");
 
     Ok(())

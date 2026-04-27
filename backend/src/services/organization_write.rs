@@ -1,6 +1,7 @@
 use chrono::Utc;
 use serde::Serialize;
 use sqlx::{PgPool, Row};
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter};
 use uuid::Uuid;
 
@@ -66,6 +67,42 @@ impl OrganizationWriteService {
         let mut written_count = 0;
         let mut skipped_count = 0;
 
+        // Collect all parent_organization_codes first
+        let mut parent_codes = HashSet::new();
+        for row in &rows {
+            let payload_text: String = row.get("payload_reference");
+            let payload = serde_json::from_str::<serde_json::Value>(&payload_text)
+                .unwrap_or_else(|_| serde_json::json!({}));
+
+            let parent_organization_code = payload
+                .get("parent_organization_code")
+                .or_else(|| payload.get("parent_code"))
+                .and_then(|value| value.as_str())
+                .map(ToString::to_string);
+
+            if let Some(code) = parent_organization_code {
+                parent_codes.insert(code);
+            }
+        }
+
+        // Fetch all parent organization IDs in a single query
+        let mut parent_org_map = HashMap::new();
+        if !parent_codes.is_empty() {
+            let parent_codes_vec: Vec<String> = parent_codes.into_iter().collect();
+            let parent_orgs = sqlx::query(
+                "select organization_code, organization_id from organization_master where organization_code = ANY($1)",
+            )
+            .bind(&parent_codes_vec)
+            .fetch_all(&self.pool)
+            .await?;
+
+            for org_row in parent_orgs {
+                let code: String = org_row.get("organization_code");
+                let id: Uuid = org_row.get("organization_id");
+                parent_org_map.insert(code, id);
+            }
+        }
+
         for row in &rows {
             let organization_id: Uuid = row.get("target_entity_id");
             let organization_code: String = row.get("source_object_id");
@@ -88,17 +125,10 @@ impl OrganizationWriteService {
                 .or_else(|| payload.get("parent_code"))
                 .and_then(|value| value.as_str())
                 .map(ToString::to_string);
-            let parent_organization_id =
-                if let Some(parent_code) = parent_organization_code.as_ref() {
-                    sqlx::query_scalar::<_, Uuid>(
-                    "select organization_id from organization_master where organization_code = $1",
-                )
-                .bind(parent_code)
-                .fetch_optional(&self.pool)
-                .await?
-                } else {
-                    None
-                };
+
+            let parent_organization_id = parent_organization_code
+                .as_ref()
+                .and_then(|code| parent_org_map.get(code).copied());
 
             if parent_organization_code.is_some() && parent_organization_id.is_none() {
                 skipped_count += 1;
