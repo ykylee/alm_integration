@@ -1,6 +1,7 @@
 use chrono::Utc;
 use serde::Serialize;
 use sqlx::{PgPool, Row};
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter};
 use uuid::Uuid;
 
@@ -67,7 +68,10 @@ impl WorkforceWriteService {
         let mut written_count = 0;
         let mut skipped_count = 0;
 
-        for row in &rows {
+        let mut identity_keys_to_fetch = HashSet::new();
+        let mut parsed_rows = Vec::with_capacity(rows.len());
+
+        for row in rows {
             let workforce_id: Uuid = row.get("target_entity_id");
             let source_system: String = row.get("source_system");
             let employee_number: String = row.get("source_object_id");
@@ -75,6 +79,63 @@ impl WorkforceWriteService {
             let payload = serde_json::from_str::<serde_json::Value>(&payload_text)
                 .unwrap_or_else(|_| serde_json::json!({}));
 
+            if let Some(primary_organization_code) = payload
+                .get("primary_organization_code")
+                .or_else(|| payload.get("organization_code"))
+                .and_then(|value| value.as_str())
+            {
+                identity_keys_to_fetch.insert((
+                    source_system.clone(),
+                    format!("organization:{primary_organization_code}"),
+                ));
+            }
+
+            parsed_rows.push((
+                workforce_id,
+                source_system,
+                employee_number,
+                payload,
+            ));
+        }
+
+        let mut identity_mappings: HashMap<(String, String), Uuid> = HashMap::new();
+        if !identity_keys_to_fetch.is_empty() {
+            let mut source_systems = Vec::with_capacity(identity_keys_to_fetch.len());
+            let mut source_identity_keys = Vec::with_capacity(identity_keys_to_fetch.len());
+            for (sys, key) in identity_keys_to_fetch {
+                source_systems.push(sys);
+                source_identity_keys.push(key);
+            }
+
+            let mapping_rows = sqlx::query(
+                r#"
+                select distinct on (source_system_code, source_identity_key)
+                  source_system_code,
+                  source_identity_key,
+                  internal_entity_id
+                from identity_mapping
+                where internal_entity_type = 'organization'
+                  and mapping_status in ('active', 'verified')
+                  and (source_system_code, source_identity_key) in (
+                    select * from unnest($1::text[], $2::text[])
+                  )
+                order by source_system_code, source_identity_key, updated_at desc
+                "#,
+            )
+            .bind(&source_systems)
+            .bind(&source_identity_keys)
+            .fetch_all(&self.pool)
+            .await?;
+
+            for m_row in mapping_rows {
+                let sys: String = m_row.get("source_system_code");
+                let key: String = m_row.get("source_identity_key");
+                let entity_id: Uuid = m_row.get("internal_entity_id");
+                identity_mappings.insert((sys, key), entity_id);
+            }
+        }
+
+        for (workforce_id, source_system, employee_number, payload) in parsed_rows {
             let display_name = payload
                 .get("display_name")
                 .or_else(|| payload.get("name"))
@@ -93,22 +154,10 @@ impl WorkforceWriteService {
                 continue;
             };
 
-            let primary_organization_id = sqlx::query_scalar::<_, Uuid>(
-                r#"
-                select internal_entity_id
-                from identity_mapping
-                where source_system_code = $1
-                  and source_identity_key = $2
-                  and internal_entity_type = 'organization'
-                  and mapping_status in ('active', 'verified')
-                order by updated_at desc
-                limit 1
-                "#,
-            )
-            .bind(&source_system)
-            .bind(format!("organization:{primary_organization_code}"))
-            .fetch_optional(&self.pool)
-            .await?;
+            let identity_key = format!("organization:{primary_organization_code}");
+            let primary_organization_id = identity_mappings
+                .get(&(source_system.clone(), identity_key))
+                .copied();
 
             let Some(primary_organization_id) = primary_organization_id else {
                 skipped_count += 1;
