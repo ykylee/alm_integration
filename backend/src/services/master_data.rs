@@ -423,7 +423,9 @@ impl MasterDataStore {
         let organization = self
             .organizations
             .iter()
-            .find(|record| Some(record.organization_code.clone()) == input.primary_organization_code)
+            .find(|record| {
+                Some(record.organization_code.clone()) == input.primary_organization_code
+            })
             .cloned();
 
         let now = Utc::now().to_rfc3339();
@@ -434,10 +436,12 @@ impl MasterDataStore {
         {
             existing.display_name = input.display_name;
             existing.employment_status = input.employment_status;
-            existing.primary_organization_code =
-                organization.as_ref().map(|item| item.organization_code.clone());
-            existing.primary_organization_name =
-                organization.as_ref().map(|item| item.organization_name.clone());
+            existing.primary_organization_code = organization
+                .as_ref()
+                .map(|item| item.organization_code.clone());
+            existing.primary_organization_name = organization
+                .as_ref()
+                .map(|item| item.organization_name.clone());
             existing.job_family = input.job_family;
             existing.email = input.email;
             existing.updated_at = now.clone();
@@ -448,8 +452,12 @@ impl MasterDataStore {
                 employee_number: input.employee_number,
                 display_name: input.display_name,
                 employment_status: input.employment_status,
-                primary_organization_code: organization.as_ref().map(|item| item.organization_code.clone()),
-                primary_organization_name: organization.as_ref().map(|item| item.organization_name.clone()),
+                primary_organization_code: organization
+                    .as_ref()
+                    .map(|item| item.organization_code.clone()),
+                primary_organization_name: organization
+                    .as_ref()
+                    .map(|item| item.organization_name.clone()),
                 job_family: input.job_family,
                 email: input.email,
                 created_at: now.clone(),
@@ -502,8 +510,12 @@ impl MasterDataStore {
         if let Some(status) = input.employment_status {
             existing.employment_status = status;
         }
-        existing.primary_organization_code = organization.as_ref().map(|item| item.organization_code.clone());
-        existing.primary_organization_name = organization.as_ref().map(|item| item.organization_name.clone());
+        existing.primary_organization_code = organization
+            .as_ref()
+            .map(|item| item.organization_code.clone());
+        existing.primary_organization_name = organization
+            .as_ref()
+            .map(|item| item.organization_name.clone());
         if let Some(job_family) = input.job_family {
             existing.job_family = job_family;
         }
@@ -549,11 +561,9 @@ impl MasterDataStore {
 
     fn sync_workforce_organization_names(&mut self) {
         for workforce in &mut self.workforce {
-            if let Some(organization) = self
-                .organizations
-                .iter()
-                .find(|record| Some(record.organization_code.clone()) == workforce.primary_organization_code)
-            {
+            if let Some(organization) = self.organizations.iter().find(|record| {
+                Some(record.organization_code.clone()) == workforce.primary_organization_code
+            }) {
                 workforce.primary_organization_name = Some(organization.organization_name.clone());
             } else {
                 workforce.primary_organization_name = None;
@@ -1156,29 +1166,28 @@ impl MasterDataRepository {
         input: UpsertWorkforceInput,
     ) -> Result<WorkforceRecord, MasterDataRepositoryError> {
         let mut transaction = self.pool.begin().await?;
-        let primary_organization_row = if let Some(primary_organization_code) =
-            input.primary_organization_code.as_ref()
-        {
-            Some(
-                sqlx::query(
-                    r#"
+        let primary_organization_row =
+            if let Some(primary_organization_code) = input.primary_organization_code.as_ref() {
+                Some(
+                    sqlx::query(
+                        r#"
                     select organization_id, organization_code, organization_name
                     from organization_master
                     where organization_code = $1
                     "#,
+                    )
+                    .bind(primary_organization_code)
+                    .fetch_optional(&mut *transaction)
+                    .await?
+                    .ok_or_else(|| {
+                        MasterDataRepositoryError::InvalidReference(format!(
+                            "organization not found: {primary_organization_code}"
+                        ))
+                    })?,
                 )
-                .bind(primary_organization_code)
-                .fetch_optional(&mut *transaction)
-                .await?
-                .ok_or_else(|| {
-                    MasterDataRepositoryError::InvalidReference(format!(
-                        "organization not found: {primary_organization_code}"
-                    ))
-                })?,
-            )
-        } else {
-            None
-        };
+            } else {
+                None
+            };
 
         let primary_organization_id: Option<Uuid> = primary_organization_row
             .as_ref()
@@ -1327,10 +1336,9 @@ impl MasterDataRepository {
 
         let next_organization_code =
             primary_organization_code.or_else(|| current_primary_organization_code.clone());
-        let primary_organization_id = if let Some(next_organization_code) =
-            next_organization_code.as_ref()
-        {
-            Some(
+        let primary_organization_id =
+            if let Some(next_organization_code) = next_organization_code.as_ref() {
+                Some(
                 sqlx::query_scalar::<_, Uuid>(
                     "select organization_id from organization_master where organization_code = $1",
                 )
@@ -1343,9 +1351,9 @@ impl MasterDataRepository {
                     ))
                 })?,
             )
-        } else {
-            None
-        };
+            } else {
+                None
+            };
 
         let next_display_name = display_name.unwrap_or(current_display_name.clone());
         let next_employment_status = employment_status.unwrap_or(current_employment_status);
@@ -1691,7 +1699,9 @@ fn match_workforce_filter(record: &WorkforceRecord, filter: &WorkforceListFilter
         && filter
             .primary_organization_code
             .as_ref()
-            .map_or(true, |value| record.primary_organization_code.as_deref() == Some(value.as_str()))
+            .map_or(true, |value| {
+                record.primary_organization_code.as_deref() == Some(value.as_str())
+            })
 }
 
 fn build_organization_structure_snapshot(
