@@ -28,15 +28,6 @@ impl ConfluencePullAdapter {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn from_env(transport: Arc<dyn HttpTransport>) -> Self {
-        Self::new(
-            transport,
-            std::env::var("ALM_CONFLUENCE_BASE_URL").ok(),
-            std::env::var("ALM_CONFLUENCE_TOKEN").ok(),
-        )
-    }
-
     #[cfg(test)]
     pub fn new_for_test(
         transport: Arc<dyn HttpTransport>,
