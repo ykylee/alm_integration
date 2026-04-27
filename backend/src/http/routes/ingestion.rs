@@ -8,7 +8,7 @@ use crate::app_state::AppState;
 use crate::security::ingestion_auth::{IngestionAuthError, verify_ingestion_request};
 use crate::services::push_ingestion::{PushIngestionProcessor, PushIngestionProcessorError};
 use crate::services::raw_ingestion::{
-    CreateRawIngestionEventInput, RawIngestionRepository, RawIngestionRepositoryError,
+    CreateRawIngestionEventInput, RawIngestionAcceptedRecord, RawIngestionRepository, RawIngestionRepositoryError,
 };
 
 #[derive(Debug, Clone, Deserialize)]
@@ -42,21 +42,57 @@ async fn create_ingestion_event(
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<(StatusCode, Json<IngestionEventResponse>), (StatusCode, &'static str)> {
+    let request = parse_and_verify_request(&state, &headers, &body)?;
+    let input = adapt_request(&state, request)?;
+    let record = save_raw_event(&state, input).await?;
+
+    process_push_ingestion(&state, &record).await?;
+
+    let status = if record.accepted {
+        StatusCode::ACCEPTED
+    } else {
+        StatusCode::OK
+    };
+
+    Ok((
+        status,
+        Json(IngestionEventResponse {
+            request_id: record.request_id,
+            accepted: record.accepted,
+            run_id: record.run_id,
+            status: record.status,
+            message: record.message,
+        }),
+    ))
+}
+
+fn parse_and_verify_request(
+    state: &AppState,
+    headers: &HeaderMap,
+    body: &Bytes,
+) -> Result<IngestionEventRequest, (StatusCode, &'static str)> {
     let request: IngestionEventRequest =
-        serde_json::from_slice(&body).map_err(|_| (StatusCode::BAD_REQUEST, "INVALID_JSON"))?;
+        serde_json::from_slice(body).map_err(|_| (StatusCode::BAD_REQUEST, "INVALID_JSON"))?;
 
     verify_ingestion_request(
         &state.ingestion_auth_registry,
         &request.source_system,
-        &headers,
+        headers,
         &axum::http::Method::POST,
         "/api/v1/ingestion/events",
-        &body,
+        body,
         chrono::Utc::now(),
     )
     .map_err(map_ingestion_auth_error)?;
 
-    let input = if let Some(adapter) = state
+    Ok(request)
+}
+
+fn adapt_request(
+    state: &AppState,
+    request: IngestionEventRequest,
+) -> Result<CreateRawIngestionEventInput, (StatusCode, &'static str)> {
+    if let Some(adapter) = state
         .adapter_registry
         .get_push_adapter(&request.source_system)
     {
@@ -70,9 +106,9 @@ async fn create_ingestion_event(
                 source_updated_at: request.source_updated_at,
                 payload: request.payload,
             })
-            .map_err(map_adapter_error)?
+            .map_err(map_adapter_error)
     } else {
-        CreateRawIngestionEventInput {
+        Ok(CreateRawIngestionEventInput {
             source_system: request.source_system,
             source_object_type: request.source_object_type,
             source_object_id: request.source_object_id,
@@ -80,19 +116,29 @@ async fn create_ingestion_event(
             source_version: request.source_version,
             source_updated_at: request.source_updated_at,
             payload: request.payload,
-        }
-    };
+        })
+    }
+}
 
-    let record = if let Some(pool) = state.db_pool.clone() {
+async fn save_raw_event(
+    state: &AppState,
+    input: CreateRawIngestionEventInput,
+) -> Result<RawIngestionAcceptedRecord, (StatusCode, &'static str)> {
+    if let Some(pool) = state.db_pool.clone() {
         RawIngestionRepository::new(pool)
             .create(input)
             .await
-            .map_err(map_repository_error)?
+            .map_err(map_repository_error)
     } else {
         let mut store = state.raw_ingestion_store.write().await;
-        store.create(input)
-    };
+        Ok(store.create(input))
+    }
+}
 
+async fn process_push_ingestion(
+    state: &AppState,
+    record: &RawIngestionAcceptedRecord,
+) -> Result<(), (StatusCode, &'static str)> {
     if record.accepted {
         if let Some(pool) = state.db_pool.clone() {
             PushIngestionProcessor::new(pool)
@@ -101,21 +147,7 @@ async fn create_ingestion_event(
                 .map_err(map_push_processor_error)?;
         }
     }
-
-    Ok((
-        if record.accepted {
-            StatusCode::ACCEPTED
-        } else {
-            StatusCode::OK
-        },
-        Json(IngestionEventResponse {
-            request_id: record.request_id,
-            accepted: record.accepted,
-            run_id: record.run_id,
-            status: record.status,
-            message: record.message,
-        }),
-    ))
+    Ok(())
 }
 
 fn map_repository_error(error: RawIngestionRepositoryError) -> (StatusCode, &'static str) {
