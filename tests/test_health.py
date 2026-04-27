@@ -51,10 +51,11 @@ def test_sync_run_cancel_already_requested() -> None:
     run_id = create_response.json()["run_id"]
 
     # First cancel
-    client.post(
+    first_cancel_response = client.post(
         f"/api/v1/admin/sync-runs/{run_id}/cancel",
         json={"cancel_reason_code": "operator_manual_stop"},
     )
+    assert first_cancel_response.status_code == 202
 
     # Second cancel
     cancel_response = client.post(
